@@ -3,3 +3,5 @@
 
 from .common import *
 from .device import *
+from .host import *
+from .router import *
