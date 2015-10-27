@@ -61,4 +61,11 @@ class MainEventLoop(object):
             next_event.run(self.statistics)
             next_event.schedule_new_events(self)
 
+            # TODO(laksh): If all of the remaining Events are just periodic
+            # Events like InitiateRoutingTableUpdateEvent, we need to exit
+            # this loop since the network sim is basically done. Maybe hold a
+            # global state variable for the event loop saying it's done
+            # processing all the flows or something, and have a
+            # FlowCompleteEvent.
+
         logging.info("Finished running main Event loop.")
