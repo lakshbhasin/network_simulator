@@ -3,6 +3,7 @@
 
 from .common import *
 
+
 class Device(object):
     """Representation of a device (Host or Router).
 
