@@ -3,7 +3,10 @@ This module holds the Link class, the LinkBuffer class, the LinkBufferElement
 class, and various Link-related Events.
 """
 
+from Queue import Queue
+
 # TODO(yubo): Finish implementing the classes and Events for this.
+
 
 class Link(object):
     """
