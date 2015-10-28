@@ -23,7 +23,6 @@ class MainEventLoop(object):
         :ivar PriorityQueue events: a priority queue of (start_time_sec,
         Event) tuples, used to easily retrieve the (earliest) next Event.
         :ivar Statistics statistics: statistics for this network.
-        :return:
         """
         self.global_clock_sec = 0.0
         self.events = PriorityQueue()
@@ -33,7 +32,6 @@ class MainEventLoop(object):
         """
         Schedules an event delay_sec from now.
         :param float delay_sec: non-negative time delay.
-        :return:
         """
         if delay_sec < 0.0:
             raise ValueError("Tried to schedule an Event with negative delay.")
@@ -55,11 +53,20 @@ class MainEventLoop(object):
             next_event_start_time, next_event = self.events.get_nowait()
 
             # Ensure not travelling backwards in time.
-            assert next_event_start_time >= self.global_clock_sec
+            if next_event_start_time < self.global_clock_sec:
+                raise ValueError("Next event starts at "
+                                 + next_event_start_time + " s, which is "
+                                 + "before " + self.global_clock_sec + " s.")
+
             self.global_clock_sec = next_event_start_time
 
-            next_event.run(self.statistics)
-            next_event.schedule_new_events(self)
+            try:
+                next_event.run(self.statistics)
+                next_event.schedule_new_events(self)
+            except:
+                # TODO(team): Output Statistics collected so far.
+                print "Unexpected error. Outputting Statistics..."
+                raise
 
             # TODO(laksh): If all of the remaining Events are just periodic
             # Events like InitiateRoutingTableUpdateEvent, we need to exit
@@ -69,3 +76,5 @@ class MainEventLoop(object):
             # FlowCompleteEvent.
 
         logging.info("Finished running main Event loop.")
+
+        # TODO(team): Output final Statistics
