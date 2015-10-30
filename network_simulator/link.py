@@ -17,8 +17,8 @@ class Link(object):
     """
 
     def __init__(self, end_1_addr=None, end_2_addr=None, end_1_device=None,
-                 end_2_device=None, buffer=None, static_delay_sec=None,
-                 capacity_bps=None):
+                 end_2_device=None, buffer=None, buffer_occupancy=0,
+                 static_delay_sec=None, capacity_bps=None):
         """
         :ivar string end_1_addr: address of Device on one end (e.g. "H1").
         :ivar string end_2_addr: address of Device on other end.
@@ -35,6 +35,8 @@ class Link(object):
         self.end_1_device = end_1_device
         self.end_2_device = end_2_device
         self.buffer = buffer
+        # TODO(team): Can we make sure if this can be implemented.
+        self.buffer_occupancy = buffer_occupancy
         self.static_delay_sec = static_delay_sec
         self.capacity_bps = capacity_bps
         self.busy = False
