@@ -243,8 +243,6 @@ class NetworkTopology(object):
         """
         # Set up un-initialized Host attributes
         for host in self.hosts:
-            host.flow_packets_received = dict()
-
             # Get Link connected to this Host.
             connected_links = self.__get_links_with_end_addr(host.address)
             if len(connected_links) > 1:
@@ -257,33 +255,24 @@ class NetworkTopology(object):
 
             # Configure Flows that start at this Host.
             connected_flows = self.__get_flows_with_source_addr(host.address)
-            flows_dict = dict()
             for flow in connected_flows:
-                flows_dict[flow.flow_id] = flow
-            host.flows = flows_dict
+                host.flows[flow.flow_id] = flow
 
         # Set up un-initialized Router attributes
         for router in self.routers:
-            router.routing_table = dict()
-            router.old_routing_table = dict()
-            router.device_distances = dict()
-
             router.links = self.__get_links_with_end_addr(router.address)
 
         # Set up un-initialized Link attributes
         for link in self.links:
             link.end_1_device = self.__get_device_with_addr(link.end_1_addr)
             link.end_2_device = self.__get_device_with_addr(link.end_2_addr)
-            link.buffer.queue = Queue()
 
         # Set up un-initialized Flow attributes
         for flow in self.flows:
             flow.source = self.__get_host_with_addr(flow.source_addr)
             flow.dest = self.__get_host_with_addr(flow.dest_addr)
             flow.window_size_packets = INITIAL_WINDOW_SIZE_PACKETS
-            flow.packets_in_transit = list()
-            flow.packet_rtts = list()
 
             # TODO(team): Set up other initial params depending on the Flow's
             # TCP algorithm (i.e. the subclass)? Could also just pass these
-            # into the JSON.
+            # into the JSON or have them as defaults in constructor.

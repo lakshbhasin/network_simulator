@@ -17,14 +17,14 @@ class Link(object):
     """
 
     def __init__(self, end_1_addr=None, end_2_addr=None, end_1_device=None,
-                 end_2_device=None, buffer=None, static_delay_sec=None,
-                 capacity_bps=None):
+                 end_2_device=None, link_buffer=LinkBuffer(),
+                 static_delay_sec=None, capacity_bps=None):
         """
         :ivar string end_1_addr: address of Device on one end (e.g. "H1").
         :ivar string end_2_addr: address of Device on other end.
         :ivar Device end_1_device: actual Device on one end.
         :ivar Device end_2_device: actual Device on the other end.
-        :ivar LinkBuffer buffer: the link's buffer.
+        :ivar LinkBuffer link_buffer: the link's buffer.
         :ivar float static_delay_sec: link propagation delay.
         :ivar float capacity_bps: max link capacity in bits per second.
         :ivar boolean busy: whether the Link is being used for transmission
@@ -34,7 +34,7 @@ class Link(object):
         self.end_2_addr = end_2_addr
         self.end_1_device = end_1_device
         self.end_2_device = end_2_device
-        self.buffer = buffer
+        self.link_buffer = link_buffer
         self.static_delay_sec = static_delay_sec
         self.capacity_bps = capacity_bps
         self.busy = False
@@ -63,7 +63,7 @@ class LinkBuffer(object):
     TODO(yubo): Functions for whether this is full etc.
     """
 
-    def __init__(self, buffer_size_bits=None, queue=None):
+    def __init__(self, buffer_size_bits=None, queue=Queue()):
         """
         :ivar int buffer_size_bits: maximum buffer size in bits.
         :ivar Queue queue: a FIFO queue of LinkBufferElements
