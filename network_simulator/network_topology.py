@@ -164,7 +164,7 @@ class NetworkTopology(object):
         flow_ids = set()
         for flow in self.flows:
             if flow.source_addr is None or flow.dest_addr is None or \
-                    flow.id is None or flow.data_size_bits is None or \
+                    flow.flow_id is None or flow.data_size_bits is None or \
                     flow.start_time is None:
                 raise ValueError("Flow " + flow + " did not have required "
                                  "properties")
@@ -176,11 +176,11 @@ class NetworkTopology(object):
                 raise ValueError("Flow " + flow + " had non-Host source or "
                                  "destination address")
 
-            if flow.id in flow_ids:
+            if flow.flow_id in flow_ids:
                 raise ValueError("Flow " + flow + " had same ID as another "
                                  "Flow.")
             else:
-                flow_ids.add(flow.id)
+                flow_ids.add(flow.flow_id)
 
     def __get_device_with_addr(self, device_addr):
         devices = copy.copy(self.hosts)
@@ -259,7 +259,7 @@ class NetworkTopology(object):
             connected_flows = self.__get_flows_with_source_addr(host.address)
             flows_dict = dict()
             for flow in connected_flows:
-                flows_dict[flow.id] = flow
+                flows_dict[flow.flow_id] = flow
             host.flows = flows_dict
 
         # Set up un-initialized Router attributes
