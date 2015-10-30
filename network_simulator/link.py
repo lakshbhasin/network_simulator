@@ -39,6 +39,20 @@ class Link(object):
         self.capacity_bps = capacity_bps
         self.busy = False
 
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def __hash__(self):
+        return hash(self.end_1_addr + self.end_2_addr)
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and \
+               self.end_1_addr == other.end_1_addr and \
+               self.end_2_addr == other.end_2_addr
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class LinkBuffer(object):
     """
@@ -57,6 +71,9 @@ class LinkBuffer(object):
         self.buffer_size_bits = buffer_size_bits
         self.queue = queue
 
+    def __repr__(self):
+        return str(self.__dict__)
+
 
 class LinkBufferElement(object):
     """
@@ -71,3 +88,10 @@ class LinkBufferElement(object):
         """
         self.packet = packet
         self.dest_device_addr = dest_device_addr
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and \
+            self.__dict__ == other.__dict__

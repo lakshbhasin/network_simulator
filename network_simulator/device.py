@@ -12,10 +12,17 @@ class Device(object):
     def __init__(self, address=None):
         self.address = address
 
-    def __eq__(self, other):
-        return self.address == other.address
+    def __hash__(self):
+        return hash(self.address)
 
-    def __neq__(self, other):
-        return not __eq__(self, other)
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and \
+               self.address == other.address
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __repr__(self):
+        return str(self.__dict__)
 
     # TODO(team): More event subclasses to come?

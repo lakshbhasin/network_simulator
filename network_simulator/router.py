@@ -3,6 +3,7 @@
 
 from .device import *
 
+
 class Router(Device):
     """Representation of a router.
     A router routes :class:`Packets <.Packet>` through the network to their
@@ -26,8 +27,5 @@ class Router(Device):
         self.old_routing_table = old_routing_table
         self.device_distances = device_distances
         self.links = links
-
-    def __repr__(self):
-        return 'A router at address: ' + self.address
 
     # TODO(team): More event subclasses to come.

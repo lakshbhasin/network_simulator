@@ -23,7 +23,4 @@ class Host(Device):
         self.flow_packets_received = flow_packets_received
         self.link = link
 
-    def __repr__(self):
-        return 'A host at address: ' + self.address
-
     # TODO(team): More event subclasses to come?
