@@ -20,7 +20,7 @@ class Flow(object):
                  packets_in_transit=set(), packet_rtts=list(),
                  data_size_bits=None, start_time=None):
         """
-        :ivar int flow_id: unique ID for this Flow.
+        :ivar string flow_id: unique string ID for this Flow.
         :ivar string source_addr: address of source Host.
         :ivar string dest_addr: address of destination Host.
         :ivar Host source: source Host.
