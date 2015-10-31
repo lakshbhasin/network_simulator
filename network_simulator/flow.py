@@ -18,7 +18,7 @@ class Flow(object):
     def __init__(self, flow_id=None, source_addr=None, dest_addr=None,
                  source=None, dest=None, window_size_packets=None,
                  packets_in_transit=set(), packet_rtts=list(),
-                 data_size_bits=None, start_time=None):
+                 data_size_bits=None, start_time_sec=None):
         """
         :ivar string flow_id: unique string ID for this Flow.
         :ivar string source_addr: address of source Host.
@@ -31,7 +31,7 @@ class Flow(object):
         the RTT for each Packet that completed a round trip.
         :ivar int data_size_bits: total amount of data to transmit in bits.
         Assumed to be a multiple of the DataPacket size.
-        :ivar float start_time: start time relative to global clock.
+        :ivar float start_time_sec: start time relative to global clock.
         :return:
         """
         self.flow_id = flow_id
@@ -43,7 +43,7 @@ class Flow(object):
         self.packets_in_transit = packets_in_transit
         self.packet_rtts = packet_rtts
         self.data_size_bits = data_size_bits
-        self.start_time = start_time
+        self.start_time_sec = start_time_sec
 
     def packet_id_exceeds_data(self, packet_id):
         """
