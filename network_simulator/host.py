@@ -1,7 +1,7 @@
 """This module contains all Host definition.
 """
 
-from .device import *
+from device import *
 
 
 class Host(Device):

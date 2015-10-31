@@ -4,13 +4,16 @@ Module for NetworkTopology class.
 
 import copy
 import json
-from Queue import Queue
+import logging
 
-from .host import *
-from .common import *
-from .router import *
+from host import *
+from common import *
+from router import *
 
 import jsonpickle
+
+logger = logging.getLogger(__name__)
+
 
 class NetworkTopology(object):
     """
@@ -55,6 +58,8 @@ class NetworkTopology(object):
             topology.check_preconditions()
             topology.complete_initialization()
 
+        logger.info("Initialized NetworkTopology from %s", json_file_name)
+
         return topology
 
     def write_to_json(self, json_file_name):
@@ -73,7 +78,7 @@ class NetworkTopology(object):
         topology_json = jsonpickle.encode(self)
         topology_json_pretty = json.dumps(json.loads(topology_json), indent=4)
         with open(json_file_name, 'w') as fout:
-            fout.write(topology_json_pretty)
+            fout.write(str(topology_json_pretty))
 
     def check_preconditions(self):
         """
@@ -108,31 +113,32 @@ class NetworkTopology(object):
         device_addrs = set()
         host_addrs = set()
 
-        for rout in self.routers:
-            if rout.links is not None:
-                raise ValueError("Router " + rout + " in input JSON had "
-                                 "non-None links")
-            if rout.address is None:
-                raise ValueError("Router " + rout + " in input JSON did not "
-                                 "have required properties set")
+        if self.routers is not None:
+            for rout in self.routers:
+                if rout.links is not None:
+                    raise ValueError("Router " + str(rout) + " in input JSON "
+                                     "had non-None links")
+                if rout.address is None:
+                    raise ValueError("Router " + str(rout) + " in input JSON "
+                                     "did not have required properties set")
 
-            if rout.address in device_addrs:
-                raise ValueError("Router " + rout + " had same address as "
-                                 "another Device")
-            else:
-                device_addrs.add(rout.address)
+                if rout.address in device_addrs:
+                    raise ValueError("Router " + str(rout) + " had same "
+                                     "address as another Device")
+                else:
+                    device_addrs.add(rout.address)
 
         for host in self.hosts:
             if host.link is not None:
-                raise ValueError("Host " + host + " in input JSON had non-None"
-                                 " link")
+                raise ValueError("Host " + str(host) + " in input JSON had "
+                                 "non-None link")
             if host.address is None:
-                raise ValueError("Host " + host + " in input JSON did not have"
-                                 " required properties set")
+                raise ValueError("Host " + str(host) + " in input JSON did not "
+                                 "have required properties set")
 
             if host.address in device_addrs:
-                raise ValueError("Host " + host + " had same address as another"
-                                 " Device")
+                raise ValueError("Host " + str(host) + " had same address as "
+                                 "another Device")
             else:
                 device_addrs.add(host.address)
                 host_addrs.add(host.address)
@@ -144,41 +150,43 @@ class NetworkTopology(object):
             if link.end_1_addr is None or link.end_2_addr is None \
                     or link.static_delay_sec is None \
                     or link.capacity_bps is None \
-                    or link.buffer is None \
-                    or link.buffer.buffer_size_bits is None:
-                raise ValueError("Link " + link + " did not have required "
+                    or link.link_buffer is None \
+                    or link.link_buffer.buffer_size_bits is None:
+                raise ValueError("Link " + str(link) + " did not have required "
                                  "properties set")
             if link.end_1_device is not None or link.end_2_device is not None:
-                raise ValueError("Ends of Link " + link + " had Devices set")
-            if link.buffer.queue is not None:
-                raise ValueError("Link buffer " + link.buffer + " of Link "
-                                 + link + "had non-required properties set")
+                raise ValueError("Ends of Link " + str(link) + " had Devices "
+                                 "set")
+            if link.link_buffer.queue.qsize() != 0:
+                raise ValueError("Link buffer " + str(link.link_buffer) + " of "
+                                 "Link " + str(link) + "had a non-empty queue")
 
-            if {link.end_1_addr, link.end_2_addr} in link_ends:
-                raise ValueError("Link " + link + " had same ends as another "
-                                 "Link.")
+            this_link_ends = frozenset({link.end_1_addr, link.end_2_addr})
+            if this_link_ends in link_ends:
+                raise ValueError("Link " + str(link) + " had same ends as "
+                                 "another Link.")
             else:
-                link_ends.add({link.end_1_addr, link.end_2_addr})
+                link_ends.add(this_link_ends)
 
         # Check for unique Flow IDs
         flow_ids = set()
         for flow in self.flows:
             if flow.source_addr is None or flow.dest_addr is None or \
                     flow.flow_id is None or flow.data_size_bits is None or \
-                    flow.start_time is None:
-                raise ValueError("Flow " + flow + " did not have required "
+                    flow.start_time_sec is None:
+                raise ValueError("Flow " + str(flow) + " did not have required "
                                  "properties")
             if flow.source is not None or flow.dest is not None:
-                raise ValueError("Flow " + flow + " had a source or dest "
+                raise ValueError("Flow " + str(flow) + " had a source or dest "
                                  "Device set.")
             if flow.source_addr not in host_addrs or \
                     flow.dest_addr not in host_addrs:
-                raise ValueError("Flow " + flow + " had non-Host source or "
-                                 "destination address")
+                raise ValueError("Flow " + str(flow) + " had non-Host source "
+                                 "or destination address")
 
             if flow.flow_id in flow_ids:
-                raise ValueError("Flow " + flow + " had same ID as another "
-                                 "Flow.")
+                raise ValueError("Flow " + str(flow) + " had same ID as "
+                                 "another Flow.")
             else:
                 flow_ids.add(flow.flow_id)
 
@@ -246,7 +254,7 @@ class NetworkTopology(object):
             # Get Link connected to this Host.
             connected_links = self.__get_links_with_end_addr(host.address)
             if len(connected_links) > 1:
-                raise ValueError("Host " + host + " had more than one "
+                raise ValueError("Host " + str(host) + " had more than one "
                                  "connected Link.")
             if len(connected_links) == 0:
                 host.link = None
@@ -259,8 +267,9 @@ class NetworkTopology(object):
                 host.flows[flow.flow_id] = flow
 
         # Set up un-initialized Router attributes
-        for router in self.routers:
-            router.links = self.__get_links_with_end_addr(router.address)
+        if self.routers is not None:
+            for router in self.routers:
+                router.links = self.__get_links_with_end_addr(router.address)
 
         # Set up un-initialized Link attributes
         for link in self.links:
@@ -276,3 +285,6 @@ class NetworkTopology(object):
             # TODO(team): Set up other initial params depending on the Flow's
             # TCP algorithm (i.e. the subclass)? Could also just pass these
             # into the JSON or have them as defaults in constructor.
+
+    def __repr__(self):
+        return str(self.__dict__)

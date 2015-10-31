@@ -5,7 +5,7 @@ TCP algorithms), and Flow-related Events.
 
 from abc import ABCMeta, abstractmethod
 
-from .common import *
+from common import *
 
 
 class Flow(object):
@@ -85,6 +85,9 @@ class Flow(object):
         :param packet_id: ID of packet that completed a round trip
         """
         pass
+
+    def __repr__(self):
+        return str(self.__dict__)
 
 # TODO(team): Flow-related Event subclasses
 # TODO(team): Flow subclasses for at least two TCP algorithms.

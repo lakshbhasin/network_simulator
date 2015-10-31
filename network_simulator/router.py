@@ -1,7 +1,7 @@
 """This module contains Router definition.
 """
 
-from .device import *
+from device import *
 
 
 class Router(Device):

@@ -1,7 +1,7 @@
 """This module contains all device definitions.
 """
 
-from .common import *
+from common import *
 
 
 class Device(object):
