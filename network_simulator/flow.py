@@ -50,10 +50,14 @@ class Flow(object):
         Checks if a DataPacket's ID is will exceed the amount of data to
         check. If so, this packet ID is too large and should not be sent.
         :param int packet_id: zero-indexed Packet ID
+        :return: True if Packet ID exceeds data size, else False
         """
         return (packet_id + 1) * DATA_PACKET_SIZE_BITS > self.data_size_bits
 
     def get_window_size(self):
+        """
+        :return: current window size in packets
+        """
         return self.window_size_packets
 
     @abstractmethod
