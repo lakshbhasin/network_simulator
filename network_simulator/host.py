@@ -1,7 +1,7 @@
 """This module contains all Host definition.
 """
 
-from .device import *
+from device import *
 
 
 class Host(Device):
@@ -22,8 +22,5 @@ class Host(Device):
         self.flows = flows
         self.flow_packets_received = flow_packets_received
         self.link = link
-
-    def __repr__(self):
-        return 'A host at address: ' + self.address
 
     # TODO(team): More event subclasses to come?

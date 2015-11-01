@@ -5,7 +5,7 @@ Module for the MainEventLoop class.
 from Queue import PriorityQueue
 import logging
 
-from .statistics import *
+from statistics import *
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class MainEventLoop(object):
                 next_event.schedule_new_events(self)
             except:
                 # TODO(team): Output Statistics collected so far.
-                print "Unexpected error. Outputting Statistics..."
+                logger.warning("Unexpected error. Outputting Statistics...")
                 raise
 
             # TODO(laksh): If all of the remaining Events are just periodic
@@ -75,6 +75,6 @@ class MainEventLoop(object):
             # processing all the flows or something, and have a
             # FlowCompleteEvent.
 
-        logging.info("Finished running main Event loop.")
+        logger.info("Finished running main Event loop.")
 
         # TODO(team): Output final Statistics
