@@ -81,12 +81,13 @@ class RouterPacket(Packet):
         which represents the knowledge that a given Router has about
         the distance between those two Devices.
     """
-    def __init__(self, packet_id=None, flow_id=None, source_id=None,
+    def __init__(self, source_id=None,
                  dest_id=None, start_time_sec=None, device_distances=dict()):
-        Packet.__init__(self, packet_id=packet_id, flow_id=flow_id,
+        Packet.__init__(self, packet_id=ROUTER_PACKET_DEFAULT_ID,
+                        flow_id=None,
                         source_id=source_id, dest_id=dest_id,
                         start_time_sec=start_time_sec,
                         size_bits=ROUTER_PACKET_SIZE_BITS)
 
         self.device_distances = device_distances
-        self.id = ROUTER_PACKET_DEFAULT_ID
+
