@@ -62,6 +62,7 @@ class AckPacket(Packet):
     sorted list of all of the packet IDs
     that have been received by the destination Host.
     This is used to implement selective repeat.
+    :ivar float data_packet_start_time_sec: start time of data packet sending.
     """
 
     def __init__(self, packet_id=None, flow_id=None, source_id=None,

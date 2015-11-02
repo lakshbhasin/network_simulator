@@ -179,7 +179,7 @@ class Statistics(object):
         stats = self.get_flow_stats(flow)
         stats.packet_rec_times.append(curr_time)
         # Retrieve data packet sent time from the ack packet and use
-        # it to calculate RTT time.
+        # it to calculate RTT.
         sent_time = ack_packet.data_packet_start_time_sec
         stats.packet_rtts.append(curr_time - sent_time)
 
