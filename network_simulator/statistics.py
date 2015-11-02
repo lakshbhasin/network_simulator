@@ -39,8 +39,7 @@ class FlowStats(object):
     :ivar list packet_rec_times: a list of timestamps corresponding to
     when an ACK packet was received for this :class:`.Flow`. Time is in
     seconds.
-    :ivar list packet_rtts: a list of RTTs (in seconds). Time is in
-    seconds.
+    :ivar list packet_rtts: a list of RTTs (in seconds).
     """
     def __init__(self, packet_sent_times=[], packet_rec_times=[],
                  packet_rtts=[]):
@@ -129,10 +128,13 @@ class Statistics(object):
         Update the buffer size as a link gains or loses a queue element.
 
         :param Link link: link that has a change of buffer size.
+        :param float curr_time: time of occupancy change.
         """
         stats = self.get_link_stats(link)
-        # TODO(sharon): Check with Cody if qsize() would work in this case.
-        buffer_occ_packets = link.buffer.qsize()
+        # TODO(sharon): Check with Cody if qsize() is what is want here (count
+        # number of all packets). Or do we just want to size of
+        # RoutingPackets.
+        buffer_occ_packets = link.link_buffer.qsize()
         stats.buffer_occupancy.append((curr_time, buffer_occ_packets))
 
     def link_packet_loss(self, link, curr_time):
@@ -150,54 +152,55 @@ class Statistics(object):
         Record a packet transmission of a link.
 
         :param Link link: link of action.
-        :param int packet_size: the size in bits of packet transmitting.
+        :param Packet packet: the packet transmitting.
         :param float curr_time: simulation time of transmission.
         """
         stats = self.get_link_stats(link)
-        stats.packet_transmit_times.append((curr_time, packet_size))
+        stats.packet_transmit_times.append((curr_time, packet.size_bits))
 
-    def flow_packet_sent(self, flow, curr_time):
+    def flow_packet_sent(self, flow, data_packet):
         """
-        Record a packet sent from a flow.
+        Record a data packet sent from a flow.
 
         :param Flow flow: flow of action.
-        :param float curr_time: simulation time of sending.
+        :param DataPacket data_packet: data packet to send.
         """
         stats = self.get_flow_stats(flow)
-        stats.packet_sent_times.append(curr_time)
+        stats.packet_sent_times.append(data_packet.start_time_sec)
 
-    def flow_packet_received(self, flow, curr_time):
+    def flow_packet_received(self, flow, ack_packet, curr_time):
         """
-        Record a packet received by a flow.
+        Record an ack packet received by a flow.
 
         :param Flow flow: flow of action.
+        :param AckPacket ack_packet: ack packet received.
         :param float curr_time: simulation time of reception.
         """
         stats = self.get_flow_stats(flow)
         stats.packet_rec_times.append(curr_time)
-        # Retrieve the last element on the sent_times list to find
-        # the corresponding sent time and using the diff we can
-        # determine the rtt time.
-        sent_time = stats.packet_sent_times[-1]
+        # Retrieve data packet sent time from the ack packet and use
+        # it to calculate RTT time.
+        sent_time = ack_packet.data_packet_start_time_sec
         stats.packet_rtts.append(curr_time - sent_time)
 
-    def host_packet_sent(self, host, packet_size, curr_time):
+    def host_packet_sent(self, host, packet):
         """
         Record a packet sent from a host.
 
         :param Host host: host of action.
-        :param int packet_size: size in bits of packet being sent out.
-        :param float curr_time: simulation time of sending.
+        :param Packet packet: packet sent out.
         """
         stats = self.get_host_stats(host)
-        stats.packet_sent_times.append((curr_time, packet_size))
+        stats.packet_sent_times.append((packet.start_time_sec,
+                                        packet.size_bits))
 
-    def host_packet_received(self, host, curr_time):
+    def host_packet_received(self, host, packet, curr_time):
         """
         Record a packet received by a host.
 
         :param Host host: host of action.
-        :param float curr_time: simulation time of reception.
+        :param Packet packet: packet received.
+        :param float curr_time: time of receive.
         """
         stats = self.get_host_stats(host)
-        stats.packet_rec_times.append(curr_time)
+        stats.packet_rec_times.append((curr_time, packet.size_bits))

@@ -65,13 +65,15 @@ class AckPacket(Packet):
     """
 
     def __init__(self, packet_id=None, flow_id=None, source_id=None,
-                 dest_id=None, start_time_sec=None, flow_packets_received=[]):
+                 dest_id=None, start_time_sec=None, flow_packets_received=[],
+                 data_packet_start_time_sec=None):
         Packet.__init__(self, packet_id=packet_id, flow_id=flow_id,
                         source_id=source_id, dest_id=dest_id,
                         start_time_sec=start_time_sec,
                         size_bits=ACK_PACKET_SIZE_BITS)
 
         self.flow_packets_received = flow_packets_received
+        self.data_packet_start_time_sec = data_packet_start_time_sec
 
 
 class RouterPacket(Packet):
