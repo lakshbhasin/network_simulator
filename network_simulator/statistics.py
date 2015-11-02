@@ -4,9 +4,9 @@ graphing).
 """
 
 
-from .host import *
-from .link import *
-from .flow import *
+from host import *
+from link import *
+from flow import *
 
 
 class LinkStats(object):
@@ -139,8 +139,8 @@ class Statistics(object):
         """
         Record a packet loss of a link.
 
-        :param link: link of action.
-        :param curr_time: simulation time of loss.
+        :param Link link: link of action.
+        :param float curr_time: simulation time of loss.
         """
         stats = self.get_link_stats(link)
         stats.packet_loss_times.append(curr_time)
@@ -149,9 +149,9 @@ class Statistics(object):
         """
         Record a packet transmission of a link.
 
-        :param link: link of action.
-        :param packet_size: the size in bits of packet transmitting.
-        :param curr_time: simulation time of transmission.
+        :param Link link: link of action.
+        :param int packet_size: the size in bits of packet transmitting.
+        :param float curr_time: simulation time of transmission.
         """
         stats = self.get_link_stats(link)
         stats.packet_transmit_times.append((curr_time, packet_size))
@@ -160,8 +160,8 @@ class Statistics(object):
         """
         Record a packet sent from a flow.
 
-        :param flow: flow of action.
-        :param curr_time: simulation time of sending.
+        :param Flow flow: flow of action.
+        :param float curr_time: simulation time of sending.
         """
         stats = self.get_flow_stats(flow)
         stats.packet_sent_times.append(curr_time)
@@ -170,8 +170,8 @@ class Statistics(object):
         """
         Record a packet received by a flow.
 
-        :param flow: flow of action.
-        :param curr_time: simulation time of reception.
+        :param Flow flow: flow of action.
+        :param float curr_time: simulation time of reception.
         """
         stats = self.get_flow_stats(flow)
         stats.packet_rec_times.append(curr_time)
@@ -185,9 +185,9 @@ class Statistics(object):
         """
         Record a packet sent from a host.
 
-        :param host: host of action.
-        :param packet_size: size in bits of packet being sent out.
-        :param curr_time: simulation time of sending.
+        :param Host host: host of action.
+        :param int packet_size: size in bits of packet being sent out.
+        :param float curr_time: simulation time of sending.
         """
         stats = self.get_host_stats(host)
         stats.packet_sent_times.append((curr_time, packet_size))
@@ -196,8 +196,8 @@ class Statistics(object):
         """
         Record a packet received by a host.
 
-        :param host: host of action.
-        :param curr_time: simulation time of reception.
+        :param Host host: host of action.
+        :param float curr_time: simulation time of reception.
         """
         stats = self.get_host_stats(host)
         stats.packet_rec_times.append(curr_time)
