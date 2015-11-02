@@ -1,7 +1,8 @@
 """This module contains Router definition.
 """
 
-from .device import *
+from device import *
+
 
 class Router(Device):
     """Representation of a router.
@@ -26,8 +27,5 @@ class Router(Device):
         self.old_routing_table = old_routing_table
         self.device_distances = device_distances
         self.links = links
-
-    def __repr__(self):
-        return 'A router at address: ' + self.address
 
     # TODO(team): More event subclasses to come.
