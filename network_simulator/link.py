@@ -171,7 +171,7 @@ class LinkSendEvent(Event):
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
-        main_event_loop.schedule_event_with_delay(new RouterReceivedPacketEvent(0)) # TODO get RouterReceivedPacketEvent
+        main_event_loop.schedule_event_with_delay(RouterReceivedPacketEvent(0)) # TODO get RouterReceivedPacketEvent
                                                                                     # specs
         # if link_buffer.queue is empty, then link is no longer busy
         if self.link.link_buffer.queue.empty():
@@ -197,7 +197,7 @@ class DeviceToLinkEvent(Event):
         :param Statistics statistics: the Statistics to update
         """
         # if successfully pushed
-        if(self.link.push(self.packet, self.dest_device_addr)):
+        if(self.link.push(self.packet, self.dest_device_addr)):# TODO pass push the global time here
             statistics.link_buffer_occ_change(self, self.packet, 0) # TODO update to global time
         else:
             statistics.link_packet_loss(self, 0) # TODO global time
@@ -210,5 +210,5 @@ class DeviceToLinkEvent(Event):
         """
         if(not self.link.busy): # only schedule new event if link not busy; note that dropped packet
                                 # is a sub-category of this, since link would have to be full and definitely be busy
-            main_event_loop.schedule_event_with_delay(new LinkSendEvent(self.link),0) # TODO linkSendEvent
+            main_event_loop.schedule_event_with_delay(LinkSendEvent(self.link),0) # TODO linkSendEvent
             self.link.busy = True
