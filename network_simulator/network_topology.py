@@ -151,7 +151,7 @@ class NetworkTopology(object):
                     or link.static_delay_sec is None \
                     or link.capacity_bps is None \
                     or link.link_buffer is None \
-                    or link.link_buffer.buffer_size_bits is None:
+                    or link.link_buffer.max_buffer_size_bits is None:
                 raise ValueError("Link " + str(link) + " did not have required "
                                  "properties set")
             if link.end_1_device is not None or link.end_2_device is not None:
