@@ -8,6 +8,10 @@ from packet import *
 from common import *
 from event import *
 
+logger = logging.getLogger(__name__)
+
+
+
 class LinkBuffer(object):
     """
     Representation of a Link's FIFO buffer.
@@ -21,10 +25,10 @@ class LinkBuffer(object):
         """
         :ivar int max_buffer_size_bits: maximum buffer size in bits.
         :ivar Queue queue: a FIFO queue of LinkBufferElements
+        :ivar int curr_buffer_size_bits: current buffer size in bits
         """
         self.max_buffer_size_bits = max_buffer_size_bits
         self.queue = queue
-        self.curr_buffer_size_bits = 0 # size of current buffer in bits
 
     def __repr__(self):
         return str(self.__dict__)
@@ -38,18 +42,17 @@ class LinkBuffer(object):
         """
         return self.max_buffer_size_bits - self.curr_buffer_size_bits
 
-    def push(self, packet, dest_device_addr, global_clock_sec):
+    def push(self, packet, global_clock_sec):
         """
-        :param Packet packet: Packet to push
-        :param string dest_device_addr: destination device of packet
+        Pushes packet onto LinkBuffer going towards packet.dest_id
 
-        Pushes packet onto LinkBuffer going towards dest_device_addr
+        :param Packet packet: Packet to push
         :return: True if pushed, False if not
         """
         if isinstance(packet, RouterPacket):
             # always push RouterPacket
-            self.queue.put(LinkBufferElement(packet, dest_device_addr,\
-                    global_clock_sec))
+            self.queue.put(LinkBufferElement(\
+                    packet, packet.dest_id, global_clock_sec))
             self.curr_buffer_size_bits += ROUTER_PACKET_SIZE_BITS
             return True
 
@@ -57,19 +60,19 @@ class LinkBuffer(object):
                 self.remaining() > DATA_PACKET_SIZE_BITS:
             # if DataPacket & has room
             self.curr_buffer_size_bits += DATA_PACKET_SIZE_BITS
-            self.queue.put(LinkBufferElement(packet, dest_device_addr,\
-                    global_clock_sec))
-            return True;
+            self.queue.put(LinkBufferElement(\
+                    packet, packet.dest_id, global_clock_sec))
+            return True
 
         elif isinstance(packet, AckPacket) and \
                 self.remaining() > ACK_PACKET_SIZE_BITS:
             # if AckPacket & has room
             self.curr_buffer_size_bits += ACK_PACKET_SIZE_BITS
-            self.queue.put(LinkBufferElement(packet, dest_device_addr,\
+            self.queue.put(LinkBufferElement(packet, packet.dest_id,\
                     global_clock_sec))
-            return True;
+            return True
         else:
-            return False; # failed to push
+            return False # failed to push
 
     def pop(self):
         """
@@ -78,19 +81,19 @@ class LinkBuffer(object):
         """
         return self.queue.get()
 
+
+
 class LinkBufferElement(object):
     """
     Wrapper class containing a Packet and which Device address it's going to
     (i.e. the direction).
     """
-    def __init__(self, packet, dest_device_addr, entry_time):
+    def __init__(self, packet, entry_time):
         """
         :ivar Packet packet packet in buffer element
-        :ivar string dest_device_addr destination of packet
         :ivar entry_time current time that packet is being pushed onto queue
         """
         self.packet = packet
-        self.dest_device_addr = dest_device_addr
         self.entry_time = entry_time
 
     def __repr__(self):
@@ -105,14 +108,15 @@ class LinkBufferElement(object):
         return packet of LinkBufferElement
         :return Packet packet that is in the buffer element
         """
-        return packet
+        return self.packet
 
     def get_dest(self):
         """
         return destination of LinkBufferElement
         :return string destination of the buffer element
         """
-        return dest_device_addr
+        return self.packet.dest_id
+
 
 
 class Link(object):
@@ -169,16 +173,17 @@ class Link(object):
         # TODO consider average wait time for last N packets
         return self.static_delay_sec
 
-    def push(self, packet, dest_device_addr, global_clock_sec):
+    def push(self, packet, global_clock_sec):
         """
-        :param Packet packet: Packet to push
-        :param string dest_device_addr: destination device of packet
-        :param global_clock_sec: store when packet pushed
+        Pushes packet onto own LinkBuffer
 
-        Pushes packet onto own LinkBuffer going towards dest_device_addr
+        :param Packet packet: Packet to push
+        :param global_clock_sec: store when packet pushed
         :return: True if pushed, False if not
         """
-        return self.link_buffer.push(packet, dest_device_addr, global_clock_sec)
+        return self.link_buffer.push(packet, global_clock_sec)
+
+
 
 class LinkSendEvent(Event):
     """
@@ -188,9 +193,10 @@ class LinkSendEvent(Event):
     def __init__(self, link):
         """
         :ivar link: link that must send its next packet
+        :ivar buff_elem: temporary variable containing LinkBufferElement to send
         """
         self.link = link
-        self.buffer_elem = None
+
     def run(self, main_event_loop, statistics):
         """
         runs by popping off top packet
@@ -221,7 +227,7 @@ class LinkSendEvent(Event):
         main_event_loop.schedule_event_with_delay(RouterReceivedPacketEvent(0),\
                 self.link.static_delay_sec + self.packet.size_bits / \
                     self.link.capacity_bps)
-            # TODO get RouterReceivedPacketEvent
+            # TODO(Laksh): RouterReceivedPacketEvent signature
             # recommended signature RouterReceivedPacketEvent(router, packet)?
 
         if self.link.link_buffer.queue.empty():
@@ -232,20 +238,20 @@ class LinkSendEvent(Event):
             main_event_loop.schedule_event_with_delay(LinkSendEvent(self.link),\
                     self.buffer_elem.packet.size_bits / self.link.capacity_bps)
 
+
+
 class DeviceToLinkEvent(Event):
     """
     Event representing a packet arriving at the Link
     """
 
-    def __init__(self, packet, link, dest_device_addr):
+    def __init__(self, packet, link):
         """
         :ivar packet: packet arriving at Link
         :ivar link: link that packet is arriving at
-        :ivar dest_device_addr: destination of packet
         """
         self.packet = packet
         self.link = link
-        self.dest_device_addr = dest_device_addr
 
     def run(self, main_event_loop, statistics):
         """
@@ -254,12 +260,11 @@ class DeviceToLinkEvent(Event):
         :param Statistics statistics: the Statistics to update
         """
         # if successfully pushed
-        if(self.link.push(self.packet, self.dest_device_addr,\
-                main_event_loop.global_cloc_sec)):
+        if(self.link.push(self.packet, main_event_loop.global_cloc_sec)):
             statistics.link_buffer_occ_change(self, self.packet, \
                     main_event_loop.global_clock_sec) 
         else:
-            statistics.link_packet_loss(self, main_event_loop.global_clock_sec)
+            statistics.link_packet_loss(self.link, main_event_loop.global_clock_sec)
 
     def schedule_new_events(self, main_event_loop):
         """
