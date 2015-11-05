@@ -4,9 +4,13 @@ TCP algorithms), and Flow-related Events.
 """
 
 from abc import ABCMeta, abstractmethod
+from Queue import PriorityQueue
 
 from common import *
-
+from event import *
+from link import *
+from main_event_loop import *
+from packet import *
 
 class Flow(object):
     """
@@ -68,7 +72,6 @@ class Flow(object):
             1) A timeout
             2) A single ACK that indicates the given packet is missing (logic
                for dealing with multiple dupACKs will be in Flow subclasses)
-
         If necessary, this flow can directly add Events to the MainEventLoop.
         :param int packet_id: lost Packet's ID.
         :param MainEventLoop main_event_loop: main Event loop for further
@@ -89,5 +92,164 @@ class Flow(object):
     def __repr__(self):
         return str(self.__dict__)
 
-# TODO(team): Flow-related Event subclasses
+
+
+class InitiateFlowEvent(Event):
+    def __init__(self, flow=None, packet_ids=[]):
+        """
+        An one-time Event called to set up the Flow at a given timestamp.
+        :ivar Flow flow: flow of this event.
+        :ivar list packet_ids: a list of integers of packet IDs.
+        :ivar list packets_to_send: list of data packets to send. This is
+        default to an empty list. This list will be populated later.
+        """
+        self.flow = flow
+        self.packet_ids = packet_ids
+        self.packets_to_send = []
+
+    def create_data_packet(self, packet_id, curr_time):
+        """
+        Create a DataPacket based on the current flow.
+        :param int packet_id: corresponding packet ID.
+        :param int curr_time: simulation time of this function call.
+        :return: DataPacket
+        """
+        packet = DataPacket(packet_id, self.flow.flow_id,
+                            self.flow.source_addr, self.flow.dest_addr,
+                            curr_time)
+        return packet
+
+    def run(self, statistics, curr_time):
+        """
+        Set up a list of data packets to initiate a flow.
+        :param Statistics statistics: the Statistics to update.
+        :param float curr_time: the simulation time of function call.
+        """
+        for curr_packet in self.packet_ids:
+            if not self.flow.packet_id_exceeds_data(curr_packet):
+                new_data_packet = self.create_data_packet(curr_packet,
+                                                          curr_time)
+                self.packets_to_send.append(new_data_packet)
+
+    def schedule_new_events(self, main_event_loop):
+        """
+        Schedule a FlowSendPacketsEvent immediately, with the list of packets
+        to send.
+        :param MainEventLoop main_event_loop: event loop where new Events will
+        be scheduled.
+        """
+        flow_send_event = FlowSendPacketsEvent(self.flow,
+                                               self.packets_to_send)
+        main_event_loop.schedule_event_with_delay(flow_send_event, 0.0)
+
+
+
+class FlowSendPacketsEvent(Event):
+    def __init__(self, flow, packets_to_send):
+        """
+        Send data packet from a flow.
+        :ivar Flow flow: flow of this event.
+        :ivar list packets_to_send: list of data packets to send.
+        """
+        self.flow = flow
+        self.packets_to_send = packets_to_send
+
+    def run(self, statistics):
+        """
+        Check that the size of packets combined is smaller than
+        the window size.
+        :param Statistics statistics: the Statistics to update
+        """
+        if len(set(self.flow.packets_in_transit) \
+            + set(self.flow.packets_to_send)) \
+            > self.flow.window_size_packets:
+                # TODO(team): What do we want to throw here?
+                pass
+
+        for curr_packet in self.packets_to_send:
+            if curr_packet.packet_id not in self.flow.packets_in_transit:
+                self.flow.packets_in_transit.add(curr_packet.packet_id)
+
+    def schedule_new_events(self, main_event_loop):
+        """
+        Schedule DeviceToLinkEvent and renew FlowTimeoutPacketEvent for each
+        packet.
+        :param MainEventLoop main_event_loop: event loop where new Events will
+        be scheduled.
+        """
+        # TODO(sharon): Need to fix the initialization after Link subclasses
+        # have been implemented.
+        for curr_packet in self.packets_to_send:
+            device_link_event = DeviceToLinkEvent(curr_packet, false)
+            main_event_loop.schedule_event_with_delay(device_link_event, 0.0)
+
+        # Go through the queue and remove any previously scheduled
+        # FlowTimeoutPacketEvent of the packets in packets_to_send.
+        new_queue = PriorityQueue()
+        while not self.events.empty():
+            curr_tup = self.events.get()
+            curr_event = self.curr_tup[1]
+            if type(curr_event) is FlowTimeoutPacketEvent \
+               and curr_event.packet in self.packets_to_send:
+                continue
+            new_queue.add(curr_tup)
+
+        # Add FlowTimeoutPacketEvent for the packets.
+        for curr_packet in self.packets_to_send:
+            timeout_event = FlowTimeoutPacketEvent(self.flow, curr_packet)
+            main_event_loop.schedule_event_with_delay(timeout_event,
+                                                      FLOW_TIMEOUT_SEC)
+
+
+
+class FlowTimeoutPacketEvent(Event):
+    def __init__(self, flow, packet):
+        """
+        Triggered when packet has timeout at a flow.
+        :ivar Flow flow: flow of this event.
+        :ivar packet packet: the particular packet of this timeout.
+        """
+        self.flow = flow
+        self.packet = packet
+
+    def run(self):
+        pass
+
+    def schedule_new_events(self, main_event_loop):
+        """
+        Schedule DeviceToLinkEvent and renew FlowTimeoutPacketEvent for each
+        packet.
+        :param MainEventLoop main_event_loop: event loop where new Events will
+        be scheduled.
+        """
+        # If the particular packet is currently in transit, then we don't
+        # need to do anything here.
+        if self.packet.packet_id in self.flow.packets_in_transit:
+            return
+        flow_send_event = FlowSendPacketsEvent(self.flow, [self.packets])
+        main_event_loop.schedule_event_with_delay(flow_send_event, 0.0)
+
+
+
+class FlowReceivedAckEvent(Event):
+    """
+    Triggered when an ACK is received by a flow.
+    """
+    def __init__(self, flow, packet):
+        """
+        :ivar Flow flow: flow of this event.
+        :ivar AckPacket packet: ack packet received.
+        """
+        self.flow = flow
+        self.packet = packet
+
+    def run(self):
+        # TODO(sharon): Implement.
+        pass
+
+    def schedule_new_events(self, main_event_loop):
+        # TODO(sharon): Implement.
+        pass
+
+
 # TODO(team): Flow subclasses for at least two TCP algorithms.

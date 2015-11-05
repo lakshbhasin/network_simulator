@@ -53,6 +53,7 @@ class DataPacket(Packet):
                         start_time_sec=start_time_sec,
                         size_bits=DATA_PACKET_SIZE_BITS)
 
+    # TODO(david): Need __eq__ here to do "packet in list()" in flow.py.
 
 class AckPacket(Packet):
     """
