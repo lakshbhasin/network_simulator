@@ -7,6 +7,7 @@ from Queue import Queue
 from packet import *
 from common import *
 from event import *
+import logging
 
 logger = logging.getLogger(__name__)
 
