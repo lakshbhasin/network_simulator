@@ -235,7 +235,7 @@ class FlowTimeoutPacketEvent(Event):
         """
         # If the particular packet is currently in transit, then we don't
         # need to do anything here.
-        if self.packet.packet_id in self.flow.packets_in_transit:
+        if self.packet.packet_id not in self.flow.packets_in_transit:
             return
         flow_send_event = FlowSendPacketsEvent(self.flow, [self.packets])
         main_event_loop.schedule_event_with_delay(flow_send_event, 0.0)
@@ -272,8 +272,8 @@ class FlowReceivedAckEvent(Event):
 
         # TODO(sharon): Base on following description, update the code when
         # we have finished TCP algorithm setup.
-        # 1. If there is a gap in the ACK’s list of sent packets, then that
-        # means that a packet was lost (since we’re using selective repeat).
+        # 1. If there is a gap in the list of sent packets by ACK, then that
+        # means that a packet was lost (since we are using selective repeat).
         # Update window_size accordingly based on TCP algorithm.
         # 2. If there is a duplicate ACK, update window_size and other params
         # based on TCP algorithm.

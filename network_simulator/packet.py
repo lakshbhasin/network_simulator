@@ -5,7 +5,7 @@ Packet will be an abstract class.
 """
 
 from abc import ABCMeta, abstractmethod
-from .common import *
+from common import *
 
 
 class Packet(object):
