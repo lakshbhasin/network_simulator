@@ -17,9 +17,11 @@ class Event(object):
         pass
 
     @abstractmethod
-    def run(self, statistics):
+    def run(self, main_event_loop, statistics):
         """
         Carries out the actions of this Event and updates statistics.
+        :param MainEventLoop main_event_loop: event loop where new Events will
+        be scheduled.
         :param Statistics statistics: the Statistics to update
         """
         pass
