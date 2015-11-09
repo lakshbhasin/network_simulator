@@ -73,7 +73,8 @@ class LinkBuffer(object):
 
 class LinkBufferElement(object):
     """
-    Wrapper class containing a Packet and time of entry to buffer
+    Wrapper class containing a Packet, destination Device on Link
+    and time of entry to buffer
     """
     def __init__(self, packet, dest_dev, entry_time):
         """
@@ -101,10 +102,12 @@ class Link(object):
     specified, but not the Devices themselves (since those are references).
     """
 
-    def __init__(self, end_1_device=None, end_2_device=None,
-            link_buffer=LinkBuffer(), static_delay_sec=None,
+    def __init__(self, end_1_addr=None, end_2_addr=None, end_1_device=None,
+            end_2_device=None, link_buffer=LinkBuffer(), static_delay_sec=None,
             capacity_bps=None, busy = False):
         """
+        :ivar string end_1_addr: address of Device on one end (e.g. "H1").
+        :ivar string end_2_addr: address of Device on other end (e.g. "H2").
         :ivar Device end_1_device: actual Device on one end.
         :ivar Device end_2_device: actual Device on the other end.
         :ivar LinkBuffer link_buffer: the link's buffer.
@@ -113,6 +116,8 @@ class Link(object):
         :ivar boolean busy: whether the Link is being used for transmission
         at the moment.
         """
+        self.end_1_addr = end_1_addr
+        self.end_2_addr = end_2_addr
         self.end_1_device = end_1_device
         self.end_2_device = end_2_device
         self.link_buffer = link_buffer
@@ -205,6 +210,7 @@ class LinkSendEvent(Event):
                 # TODO(Laksh): RouterReceivedPacketEvent signature
                 # recommended signature RouterReceivedPacketEvent(router, packet)?
         else:
+            assert isinstance(self.uffer_elem.dest_dev, Host)
             main_event_loop.schedule_event_with_delay(\
                     HostReceivedPacketEvent(0),\
                     self.link.static_delay_sec + self.packet.size_bits / \
@@ -215,14 +221,15 @@ class LinkSendEvent(Event):
             self.link.busy = False
         else:
             # queue new event with just transmission delay
-            assert(self.link.busy == True)
+            assert self.link.busy == True
             main_event_loop.schedule_event_with_delay(LinkSendEvent(self.link),\
                     self.buffer_elem.packet.size_bits / float(self.link.capacity_bps))
 
 
 class DeviceToLinkEvent(Event):
     """
-    Event representing a packet going from Device to Link's buffer
+    Event representing a packet going from one of two Devices connected to Link
+    to Link's LinkBuffer
     """
 
     def __init__(self, packet, link, dest_dev):
@@ -231,6 +238,8 @@ class DeviceToLinkEvent(Event):
         :ivar link: link that packet is arriving at
         :ivar dest_dev: destination Device of the packet pushed onto link
         """
+        # sanity check
+        assert link.end_1_device == dest_dev or link.end_2_device == dest_dev
         self.packet = packet
         self.link = link
         self.dest_dev = dest_dev
