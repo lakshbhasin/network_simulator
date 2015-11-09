@@ -3,14 +3,16 @@ This module holds the Link class, the LinkBuffer class, the LinkBufferElement
 class, and various Link-related Events.
 """
 
+import logging
 from Queue import Queue
-from packet import *
+
 from common import *
 from event import *
-import logging
+from host import *
+from packet import *
+from router import *
 
 logger = logging.getLogger(__name__)
-
 
 
 class LinkBuffer(object):
@@ -37,9 +39,7 @@ class LinkBuffer(object):
 
     def remaining_size_bits(self):
         """
-        returns remaining size in buffer in bits
-
-        not strictly necessary, push() will check remaining_size_bits() condition
+        Returns remaining size of buffer in bits. Used by push()
         :return: remaining buffer size in bits
         """
         return self.max_buffer_size_bits - self.curr_buffer_size_bits
@@ -52,11 +52,11 @@ class LinkBuffer(object):
         :param Device dest_dev: destination Device of packet
         :return: True if pushed, False if not
         """
-        # either if we have a RouterPacket or if there is sufficient capacity, push
+        # If we have a RouterPacket or if there is sufficient capacity, push
         if isinstance(packet, RouterPacket) or \
                 self.remaining_size_bits() > packet.size_bits:
             self.curr_buffer_size_bits += packet.size_bits
-            self.queue.put(LinkBufferElement(packet, dest_dev, \
+            self.queue.put(LinkBufferElement(packet, dest_dev,
                     global_clock_sec))
             return True
 
@@ -79,7 +79,7 @@ class LinkBufferElement(object):
     def __init__(self, packet, dest_dev, entry_time):
         """
         :ivar Packet packet packet in buffer element
-        :param Device dest_dev: destination of packet
+        :ivar Device dest_dev: destination of packet
         :ivar entry_time time packet entering buffer
         """
         self.packet = packet
@@ -144,9 +144,22 @@ class Link(object):
         Returns link cost. For now, just returns static propagation delay.
         :return: float of link delay time in seconds
         """
-
-        # TODO consider average wait time for last N packets
+        # TODO(yubo) consider average wait time for last N packets
         return self.static_delay_sec
+
+    def get_other_end(self, one_end):
+        """
+        :param Device one_end: The Device on one end of the Link.
+        :return: Device on the other end of the Link.
+        :except: ValueError if one_end is not one of the Link ends.
+        """
+        if self.end_1_device == one_end:
+            return self.end_2_device
+        elif self.end_2_device == one_end:
+            return self.end_1_device
+        else:
+            raise ValueError("Device " + str(one_end) + " was not one of the "
+                             "ends in Link " + str(self))
 
     def push(self, packet, dest_dev, global_clock_sec):
         """
@@ -168,10 +181,12 @@ class LinkSendEvent(Event):
     def __init__(self, link):
         """
         :ivar link: link that must send its next packet
-        :ivar buff_elem: temporary variable containing LinkBufferElement to send
+        :ivar buffer_elem: temporary variable containing LinkBufferElement to
+            send
         """
+        Event.__init__(self)
         self.link = link
-        self.buff_elem = None
+        self.buffer_elem = None
 
     def run(self, main_event_loop, statistics):
         """
@@ -190,8 +205,8 @@ class LinkSendEvent(Event):
 
         # update statistics only if not RouterPacket
         if not isinstance(self.buffer_elem.packet, RouterPacket):
-            statistics.link_packet_transmitted(self.link, \
-                    self.buffer_elem.packet, \
+            statistics.link_packet_transmitted(self.link,
+                    self.buffer_elem.packet,
                     main_event_loop.global_cloc_sec)
 
     def schedule_new_events(self, main_event_loop):
@@ -200,21 +215,23 @@ class LinkSendEvent(Event):
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
-        # schedule a *ReceivedPacketEvent with propagation + transmission
+        # Schedule a *ReceivedPacketEvent with propagation + transmission
         # delay, depending on whether Host or Router
+        propagation_delay = self.link.static_delay_sec
+        transmission_delay = self.buffer_elem.packet.size_bits / \
+                             float(self.link.capacity_bps)
+
         if isinstance(self.buffer_elem.dest_dev, Router):
-            main_event_loop.schedule_event_with_delay(\
-                    RouterReceivedPacketEvent(0),\
-                    self.link.static_delay_sec + self.packet.size_bits / \
-                        float(self.link.capacity_bps))
-                # TODO(Laksh): RouterReceivedPacketEvent signature
-                # recommended signature RouterReceivedPacketEvent(router, packet)?
+            main_event_loop.schedule_event_with_delay(
+                    RouterReceivedPacketEvent(router=self.buffer_elem.dest_dev,
+                                              packet=self.buffer_elem.packet),
+                    propagation_delay + transmission_delay)
         else:
-            assert isinstance(self.uffer_elem.dest_dev, Host)
-            main_event_loop.schedule_event_with_delay(\
-                    HostReceivedPacketEvent(0),\
-                    self.link.static_delay_sec + self.packet.size_bits / \
-                        float(self.link.capacity_bps))
+            assert isinstance(self.buffer_elem.dest_dev, Host)
+            # TODO(Dave): HostReceivedPacketEvent signature
+            main_event_loop.schedule_event_with_delay(
+                    HostReceivedPacketEvent(0),
+                    propagation_delay + transmission_delay)
 
         if self.link.link_buffer.queue.empty():
             # if link_buffer.queue is empty, then link is no longer busy
@@ -222,8 +239,8 @@ class LinkSendEvent(Event):
         else:
             # queue new event with just transmission delay
             assert self.link.busy == True
-            main_event_loop.schedule_event_with_delay(LinkSendEvent(self.link),\
-                    self.buffer_elem.packet.size_bits / float(self.link.capacity_bps))
+            main_event_loop.schedule_event_with_delay(LinkSendEvent(self.link),
+                                                      transmission_delay)
 
 
 class DeviceToLinkEvent(Event):
@@ -238,7 +255,9 @@ class DeviceToLinkEvent(Event):
         :ivar link: link that packet is arriving at
         :ivar dest_dev: destination Device of the packet pushed onto link
         """
-        # sanity check
+        Event.__init__(self)
+
+        # Sanity check
         assert link.end_1_device == dest_dev or link.end_2_device == dest_dev
         self.packet = packet
         self.link = link
@@ -251,12 +270,13 @@ class DeviceToLinkEvent(Event):
         :param Statistics statistics: the Statistics to update
         """
         # if successfully pushed
-        if self.link.push(self.packet, self.dest_dev, \
-                main_event_loop.global_cloc_sec):
-            statistics.link_buffer_occ_change(self, self.packet, \
-                    main_event_loop.global_clock_sec)
+        if self.link.push(self.packet, self.dest_dev,
+                          main_event_loop.global_cloc_sec):
+            statistics.link_buffer_occ_change(self, self.packet,
+                                              main_event_loop.global_clock_sec)
         else:
-            statistics.link_packet_loss(self.link, main_event_loop.global_clock_sec)
+            statistics.link_packet_loss(self.link,
+                                        main_event_loop.global_clock_sec)
 
     def schedule_new_events(self, main_event_loop):
         """
@@ -265,10 +285,10 @@ class DeviceToLinkEvent(Event):
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
-        # only schedule new event if link not busy;
-        # note that dropped packet will be no-op under
-        # this, since link would have to be full and
-        # definitely be busy, which is correct
+        # Only schedule new event if link not busy. Note that dropped packet
+        # will be no-op under this, since link would have to be full and
+        # definitely be busy if a packet were dropped.
         if not self.link.busy: 
-            main_event_loop.schedule_event_with_delay(LinkSendEvent(self.link), 0) 
+            main_event_loop.schedule_event_with_delay(
+                LinkSendEvent(self.link), 0)
             self.link.busy = True
