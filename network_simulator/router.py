@@ -1,12 +1,13 @@
 """This module contains Router definition.
 """
 
-import copy
 from device import *
 from event import *
 from host import *
 from link import *
 from packet import *
+
+logger = logging.getLogger(__name__)
 
 
 class Router(Device):
@@ -34,18 +35,15 @@ class Router(Device):
         last routing table update was initiated.
     :ivar list neighbors: a list of Devices directly connected to this
         Router. This is assumed to not change over time (i.e. no destruction).
-    :ivar bool triggered_update_before: set to True if routing table update has
-        been initiated before. Initially False.
     """
     def __init__(self, address=None, links=[]):
         Device.__init__(self, address)
         self.new_routing_table = dict()
-        self.stable_routing_table = dict()
+        self.stable_routing_table = None
         self.neighb_to_host_dists = dict()
         self.self_to_host_dists = dict()
         self.links = links
         self.last_table_update_timestamp = 0.0
-        self.triggered_update_before = False
 
         # Compute neighbors based on links.
         neighbors = []
@@ -137,14 +135,16 @@ class Router(Device):
         """
         link_to_use = None
         time_since_last_update = curr_timestamp - \
-                                 self.last_table_update_timestamp
+            self.last_table_update_timestamp
         assert time_since_last_update >= 0.0
 
         if host_id in self.new_routing_table and \
                 (time_since_last_update >= ROUTING_TABLE_STAB_TIME_SEC or
+                 self.stable_routing_table is None or
                  len(self.stable_routing_table) == 0):
             link_to_use = self.new_routing_table[host_id]
-        elif host_id in self.stable_routing_table:
+        elif self.stable_routing_table is not None and \
+                host_id in self.stable_routing_table:
             link_to_use = self.stable_routing_table[host_id]
 
         return link_to_use
@@ -184,67 +184,50 @@ class Router(Device):
                 assert router_host.router in self.neighbors
                 self.neighb_to_host_dists[router_host] = dist
 
-        # Copy of unstable routing table (swapped in after convergence).
-        new_routing_table_copy = copy.copy(self.new_routing_table)
-        routing_table_changed = True
-
         # Whether self.self_to_host_dists changed (assumed False initially).
         self_host_dists_changed = False
-        return_value = False
 
         known_hosts = self.get_known_hosts()
+        for host in known_hosts:
+            # Current next_link, and current {self -> host} cost.
+            old_next_link = self.new_routing_table.get(host.address, None)
+            old_self_to_host_min_dist = self.self_to_host_dists.get(
+                host, float('inf'))
 
-        # Keep looping until routing table and self_to_host_dists stop changing.
-        # TODO(laksh): I don't think this actually needs > 1 iteration. If
-        # not, we can simplify the code and variable names...
-        while routing_table_changed or self_host_dists_changed:
-            routing_table_changed = False
-            self_host_dists_changed = False
-            for host in known_hosts:
-                # Current next_link, and current {self -> host} cost.
-                old_next_link = new_routing_table_copy.get(host.address, None)
-                old_self_to_host_min_dist = self.self_to_host_dists.get(
-                    host, float('inf'))
+            new_next_neighbor = None  # new next neighbor to go towards
+            new_self_to_host_min_dist = float('inf')
 
-                new_next_neighbor = None  # new next neighbor to go towards
-                new_self_to_host_min_dist = float('inf')
+            # Minimize {self -> neighbor} + {neighbor -> host} dist,
+            # and find the next hop and new {self -> host} dist.
+            for neighbor in self.neighbors:
+                router_to_host_dist = float('inf')
+                if neighbor == host:
+                    # This host must be in self_to_neighb_dists.
+                    router_to_host_dist = self.self_to_neighb_dists[host]
+                elif isinstance(neighbor, Router):
+                    # Ignore non-Router neighbors that are not the
+                    # destination Host. Cost is one-hop cost.
+                    router_to_host_dist = \
+                        self.self_to_neighb_dists[neighbor] + \
+                        self.neighb_to_host_dists.get(
+                            RouterHost(router=neighbor, host=host),
+                            float('inf'))
 
-                # Minimize {self -> neighbor} + {neighbor -> host} dist,
-                # and find the next hop and new {self -> host} dist.
-                for neighbor in self.neighbors:
-                    router_to_host_dist = float('inf')
-                    if neighbor == host:
-                        # This host must be in self_to_neighb_dists.
-                        router_to_host_dist = self.self_to_neighb_dists[host]
-                    elif isinstance(neighbor, Router):
-                        # Ignore non-Router neighbors that are not the
-                        # destination Host. Cost is one-hop cost.
-                        router_to_host_dist = \
-                            self.self_to_neighb_dists[neighbor] + \
-                            self.neighb_to_host_dists.get(
-                                RouterHost(router=neighbor, host=host),
-                                float('inf'))
+                if router_to_host_dist < new_self_to_host_min_dist:
+                    new_self_to_host_min_dist = router_to_host_dist
+                    new_next_neighbor = neighbor
 
-                    if router_to_host_dist < new_self_to_host_min_dist:
-                        new_self_to_host_min_dist = router_to_host_dist
-                        new_next_neighbor = neighbor
+            # Update the self -> host distances.
+            self.self_to_host_dists[host] = new_self_to_host_min_dist
+            if new_self_to_host_min_dist != old_self_to_host_min_dist:
+                self_host_dists_changed = True
 
-                # Update the self -> host distances.
-                self.self_to_host_dists[host] = new_self_to_host_min_dist
-                if new_self_to_host_min_dist != old_self_to_host_min_dist:
-                    self_host_dists_changed = True
-                    return_value = True
+            # Check if the next link for the routing table changed.
+            new_next_link = self.get_link_with_neighbor(new_next_neighbor)
+            if new_next_link != old_next_link:
+                self.new_routing_table[host.address] = new_next_link
 
-                # Check if the next link for the routing table changed.
-                new_next_link = self.get_link_with_neighbor(new_next_neighbor)
-                if new_next_link != old_next_link:
-                    routing_table_changed = True
-                    new_routing_table_copy[host.address] = new_next_link
-
-        # After convergence, set new routing table.
-        self.new_routing_table = new_routing_table_copy
-
-        return return_value
+        return self_host_dists_changed
 
 
 class RouterHost(object):
@@ -292,9 +275,11 @@ def broadcast_router_packets(router, main_event_loop):
             continue
 
         router_packet = RouterPacket(source_id=router.address,
-            dest_id=destination.address,
-            start_time_sec=main_event_loop.global_clock_sec,
-            router_to_host_dists=router_to_host_dists)
+                                     dest_id=destination.address,
+                                     start_time_sec=
+                                     main_event_loop.global_clock_sec,
+                                     router_to_host_dists=
+                                     router_to_host_dists)
         dev_to_link_ev = DeviceToLinkEvent(packet=router_packet,
                                            link=link,
                                            dest_dev=destination)
@@ -324,12 +309,9 @@ class InitiateRoutingTableUpdateEvent(Event):
         :param main_event_loop:
         :param statistics:
         """
-        # Swap out the routing tables, unless this is the first such update.
-        if self.router.triggered_update_before:
-            self.router.stable_routing_table = self.router.new_routing_table
-            self.router.new_routing_table = dict()
-        else:
-            self.router.triggered_update_before = True
+        # Swap out the routing tables.
+        self.router.stable_routing_table = self.router.new_routing_table
+        self.router.new_routing_table = dict()
 
         # Mark routing table update time.
         self.router.last_table_update_timestamp = \
@@ -391,6 +373,8 @@ class RouterReceivedPacketEvent(Event):
                 curr_timestamp=main_event_loop.global_clock_sec)
             if self.link is None:
                 # Drop Packet and inform statistics.
+                logger.info("Router " + self.router.address + " could not " +
+                            "route packet going to " + self.packet.dest_id)
                 # TODO(team): Need way of detecting packet loss at Router?
                 pass
         else:
