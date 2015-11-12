@@ -40,6 +40,10 @@ class Packet(object):
         self.start_time_sec = start_time_sec
         self.size_bits = size_bits
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and \
+            self.packet_id == other.packet_id
+
 
 class DataPacket(Packet):
     """
@@ -53,7 +57,10 @@ class DataPacket(Packet):
                         start_time_sec=start_time_sec,
                         size_bits=DATA_PACKET_SIZE_BITS)
 
-    # TODO(david): Need __eq__ here to do "packet in list()" in flow.py.
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and \
+            self.packet_id == other.packet_id
+
 
 class AckPacket(Packet):
     """
@@ -77,6 +84,10 @@ class AckPacket(Packet):
         self.flow_packets_received = flow_packets_received
         self.data_packet_start_time_sec = data_packet_start_time_sec
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and \
+            self.packet_id == other.packet_id
+
 
 class RouterPacket(Packet):
     """
@@ -95,3 +106,6 @@ class RouterPacket(Packet):
 
         self.device_distances = device_distances
 
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and \
+            self.packet_id == other.packet_id
