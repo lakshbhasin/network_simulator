@@ -41,7 +41,7 @@ class Packet(object):
         self.size_bits = size_bits
 
     def __eq__(self, other):
-        return isinstance(other, self.__class__) and \
+        return other.__class__ == self.__class__ and \
             self.packet_id == other.packet_id
 
 
@@ -56,10 +56,6 @@ class DataPacket(Packet):
                         source_id=source_id, dest_id=dest_id,
                         start_time_sec=start_time_sec,
                         size_bits=DATA_PACKET_SIZE_BITS)
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and \
-            self.packet_id == other.packet_id
 
 
 class AckPacket(Packet):
@@ -84,10 +80,6 @@ class AckPacket(Packet):
         self.flow_packets_received = flow_packets_received
         self.data_packet_start_time_sec = data_packet_start_time_sec
 
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and \
-            self.packet_id == other.packet_id
-
 
 class RouterPacket(Packet):
     """
@@ -106,6 +98,5 @@ class RouterPacket(Packet):
 
         self.device_distances = device_distances
 
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and \
-            self.packet_id == other.packet_id
+    # TODO(team): __eq__ needs to be fixed after all branches affecting
+    # RouterPacket are merged.
