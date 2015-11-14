@@ -5,7 +5,7 @@ Packet will be an abstract class.
 """
 
 from abc import ABCMeta, abstractmethod
-from .common import *
+from common import *
 
 
 class Packet(object):
@@ -39,6 +39,10 @@ class Packet(object):
         self.dest_id = dest_id
         self.start_time_sec = start_time_sec
         self.size_bits = size_bits
+
+    def __eq__(self, other):
+        return other.__class__ == self.__class__ and \
+            self.packet_id == other.packet_id
 
 
 class DataPacket(Packet):
@@ -94,3 +98,5 @@ class RouterPacket(Packet):
 
         self.device_distances = device_distances
 
+    # TODO(team): __eq__ needs to be fixed after all branches affecting
+    # RouterPacket are merged.

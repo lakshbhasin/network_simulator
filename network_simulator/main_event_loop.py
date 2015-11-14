@@ -47,9 +47,20 @@ class MainEventLoop(object):
         if self.events.empty():
             raise ValueError("Tried to run an empty event loop.")
 
+        # Count the number of InitiateFlowEvents to track how many Flows need
+        # to complete before we exit.
+        num_flows_left = 0
+        for _, this_event in self.events.queue:
+            if isinstance(this_event, InitiateFlowEvent):
+                num_flows_left += 1
+
+        if num_flows_left == 0:
+            raise ValueError("No Flows were scheduled to run.")
+
         # Keep picking next Event by time from the PriorityQueue, run it,
-        # and schedule new Events.
-        while not self.events.empty():
+        # and schedule new Events, until either the Event queue is empty or
+        # the total number of flows has been reached.
+        while not self.events.empty() and num_flows_left > 0:
             next_event_start_time, next_event = self.events.get_nowait()
 
             # Ensure not travelling backwards in time.
@@ -68,12 +79,8 @@ class MainEventLoop(object):
                 logger.warning("Unexpected error. Outputting Statistics...")
                 raise
 
-            # TODO(laksh): If all of the remaining Events are just periodic
-            # Events like InitiateRoutingTableUpdateEvent, we need to exit
-            # this loop since the network sim is basically done. Maybe hold a
-            # global state variable for the event loop saying it's done
-            # processing all the flows or something, and have a
-            # FlowCompleteEvent.
+            if isinstance(next_event, FlowCompleteEvent):
+                num_flows_left -= 1
 
         logger.info("Finished running main Event loop.")
 
