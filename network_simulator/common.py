@@ -28,3 +28,24 @@ ROUTER_PACKET_DEFAULT_ID = -1
 """Flow's packet timeout limit in seconds."""
 # TODO(team): What should this number be?
 FLOW_TIMEOUT_SEC = 1
+
+"""
+TCP FAST window update smoothing parameter "gamma" (see
+http://netlab.caltech.edu/publications/FAST-ToN-final-060209-2007.pdf)
+"""
+TCP_FAST_DEFAULT_GAMMA = 0.5
+
+"""
+TCP FAST baseRTT/RTT additive smoothing parameter "alpha" (see above FAST paper)
+"""
+TCP_FAST_DEFAULT_ALPHA = 2.0
+
+"""
+TCP FAST time period (sec) for window updates.
+"""
+TCP_FAST_UPDATE_PERIOD_SEC = 0.1
+
+"""
+Default max number of packets to average in computing RTTs for TCP algorithms.
+"""
+TCP_NUM_PACKETS_AVE_FOR_RTT = 40
