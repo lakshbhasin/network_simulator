@@ -108,11 +108,16 @@ class Flow(object):
             1) Taking the head element in the packet ID buffer. Or...
             2) Taking max_packet_id_sent + 1
 
-        :param bool peek: If False, self.max_packet_id_sent is updated.
+        :param bool peek: If True, none of the internal metadata of the Flow
+        (e.g. self.packet_id_buffer or self.max_packet_id_sent) is updated.
         :return: int (next DataPacket's ID)
         """
         if not self.packet_id_buffer.empty():
-            next_packet_id = self.packet_id_buffer.get_nowait()
+            if not peek:
+                next_packet_id = self.packet_id_buffer.get_nowait()
+            else:
+                # Peek at next Queue element without updating buffer.
+                next_packet_id = self.packet_id_buffer.queue[0]
         else:
             next_packet_id = self.max_packet_id_sent + 1
 
@@ -151,6 +156,9 @@ class Flow(object):
         round trip. This will adjust window sizes and make other state
         changes, depending on the TCP congestion algorithm. It will also
         update common metadata and statistics.
+
+        The sending of additional Packets (e.g. if the window size is grown)
+        must be handled elsewhere, since this can be Event-dependent.
         :param Packet packet: The AckPacket that completed a round trip.
         :param Statistics statistics: The Statistics to update.
         :param float curr_time: The current simulation time (in seconds).
@@ -201,6 +209,32 @@ class Flow(object):
                         "packet %d.")
             return True
 
+    def send_packets_to_fill_window(self, main_event_loop):
+        """
+        A helper function that sends enough DataPackets to fill the window of
+        the TCP algorithm.
+        :param MainEventLoop main_event_loop: event loop for scheduling Events.
+        """
+        curr_window_size = len(self.packets_in_transit)
+        packets_to_send = []
+        while curr_window_size < self.window_size_packets:
+            new_packet_id = self.get_next_data_packet_id()
+            if self.packet_id_exceeds_data(new_packet_id):
+                # We are out of Packets to send. Semd what's already there.
+                break
+
+            new_packet = DataPacket(packet_id=new_packet_id,
+                                    flow_id=self.flow_id,
+                                    source_id=self.source_addr,
+                                    dest_id=self.dest_addr,
+                                    start_time_sec=
+                                    main_event_loop.global_clock_sec)
+            packets_to_send.append(new_packet)
+
+        if len(packets_to_send) > 0:
+            flow_send_event = FlowSendPacketsEvent(self, packets_to_send)
+            main_event_loop.schedule_event_with_delay(flow_send_event, 0.0)
+
     def __repr__(self):
         return str(self.__dict__)
 
@@ -213,11 +247,6 @@ class Flow(object):
 # TODO(laksh): handle_packet_loss needs to schedule events for timeouts and
 # other losses as well; this is not handled directly in the Event code. Must
 # schedule FlowSendPacketsEvent.
-# TODO(laksh): handle_packet_loss may have to interact with Packet ID buffer
-# if window size is already reached. Buffer is read from after ACKs received.
-# TODO(laksh): Need a periodic Event for TCP FAST window size updates. This
-# will also schedule new FlowSendPacketsEvents if there is enough space in
-# the new window.
 
 class FlowDummy(Flow):
     """
@@ -469,27 +498,7 @@ class PeriodicFlowInterrupt(Event):
         # (if it has grown).
         new_window_size = self.flow.get_window_size()
         if new_window_size > self.old_window_size:
-            curr_window_size = len(self.flow.packets_in_transit)
-            packets_to_send = []
-
-            while curr_window_size < self.flow.window_size_packets:
-                new_packet_id = self.flow.get_next_data_packet_id()
-                if self.flow.packet_id_exceeds_data(new_packet_id):
-                    # We are out of packets to send. Just do nothing for now
-                    # (wait for ACKs to trigger FlowCompleteEvent).
-                    return
-
-                new_packet = DataPacket(packet_id=new_packet_id,
-                                        flow_id=self.flow.flow_id,
-                                        source_id=self.flow.source_addr,
-                                        dest_id=self.flow.dest_addr,
-                                        start_time_sec=
-                                        main_event_loop.global_clock_sec)
-                packets_to_send.append(new_packet)
-
-            if len(packets_to_send) > 0:
-                flow_send_event = FlowSendPacketsEvent(self, packets_to_send)
-                main_event_loop.schedule_event_with_delay(flow_send_event, 0.0)
+            self.flow.send_packets_to_fill_window(main_event_loop)
 
 
 class FlowSendPacketsEvent(Event):
@@ -535,7 +544,8 @@ class FlowSendPacketsEvent(Event):
 
     def schedule_new_events(self, main_event_loop):
         """
-        Schedule FlowSendPacketsEvent for timed out packets.
+        Send DataPackets via DeviceToLinkEvent, and schedule
+        FlowTimeoutPacketEvents.
 
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
@@ -663,10 +673,25 @@ class FlowReceivedAckEvent(Event):
         """
         Schedule Flow events based on whether a Packet loss occurred (must
         trigger retransmit) or not (fill up window size as much as possible).
+        Also schedule a FlowCompleteEvent if there's no more data to send.
 
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
+        # If we didn't lose any Packets and no more are in transit, check if
+        # we've managed to transmit all of the data needed. (If there are
+        # losses, retransmits will be needed, so we cannot mark the Flow as
+        # done yet).
+        if len(self.lost_packet_ids) == 0 and \
+                len(self.flow.packets_in_transit) == 0:
+            # Peek at next Packet ID without updating Flow metadata
+            new_packet_id = self.flow.get_next_data_packet_id(peek=True)
+            if self.flow.packet_id_exceeds_data(new_packet_id):
+                # We are out of packets to send. Send Complete Event.
+                flow_complete = FlowCompleteEvent(self.flow)
+                main_event_loop.schedule_event_with_delay(flow_complete, 0.0)
+                return
+
         # Deal with lost Packets. This involves letting the Flow update its
         # window size and schedule new FlowSendPacketsEvents in its
         # specialized way. NOTE: assuming all losses are gaps.
@@ -677,27 +702,7 @@ class FlowReceivedAckEvent(Event):
 
         # Even if a Packet loss occurred, we can try to schedule new Packets
         # to send (if there's a big enough window size).
-        curr_window_size = len(self.flow.packets_in_transit)
-        packets_to_send = []
-        while curr_window_size < self.flow.get_window_size():
-            new_packet_id = self.flow.get_next_data_packet_id()
-            if self.flow.packet_id_exceeds_data(new_packet_id):
-                # We are out of packets to send. Send Complete Event.
-                flow_complete = FlowCompleteEvent(self.flow)
-                main_event_loop.schedule_event_with_delay(flow_complete, 0.0)
-                return
-
-            new_packet = DataPacket(packet_id=new_packet_id,
-                                    flow_id=self.flow.flow_id,
-                                    source_id=self.flow.source_addr,
-                                    dest_id=self.flow.dest_addr,
-                                    start_time_sec=
-                                    main_event_loop.global_clock_sec)
-            packets_to_send.append(new_packet)
-
-        if len(packets_to_send) > 0:
-            flow_send_event = FlowSendPacketsEvent(self.flow, packets_to_send)
-            main_event_loop.schedule_event_with_delay(flow_send_event, 0.0)
+        self.flow.send_packets_to_fill_window(main_event_loop)
 
 
 class FlowCompleteEvent(Event):
