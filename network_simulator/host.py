@@ -1,7 +1,6 @@
 """This module contains all Host definition.
 """
 
-import inspect
 from device import *
 from event import *
 from flow import *
@@ -58,9 +57,9 @@ class HostReceivedPacketEvent(Event):
         :param statistics: statistics to update
         """
         # add packet to host.flow_packets_received
-        self.flow_packets_received[packet.flow_id] = packet.packet_id
-
-        statistics.host_packet_sent(self.host, self.packet)
+        self.flow_packets_received[self.packet.flow_id] = self.packet.packet_id
+        self.flow_packets_received.sort()
+        
         statistics.host_packet_received(self.host, self.packet,
                                         main_event_loop.global_clock_sec)
 
@@ -79,14 +78,14 @@ class HostReceivedPacketEvent(Event):
         :param statistics: update statistics
         """
 
-        if inspect.isclass(self.packet) == AckPacket:
+        if isinstance(self.packet, AckPacket):
             main_event_loop.schedule_new_event_with_delay(self, self.flow,
                                                           self.packet)
             ack_flow_id = self.packet.flow_id
             for i in self.flow_packets_received:
                 if self.flow_packets_received[i].flow_id == ack_flow_id:
                     self.flow_packets_received[i].packet_id = self.packet_id
-        if inspect.isclass(self.packet) == DataPacket and \
+        if isinstance(self.packet, DataPacket) and \
                         self.packet_id not in self.flow_packets_received:
             a_packet = AckPacket(self.packet)
             DeviceToLinkEvent(a_packet, self.link, dest_dev)
