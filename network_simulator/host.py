@@ -3,6 +3,9 @@
 
 import inspect
 from device import *
+from event import *
+from flow import *
+from link import *
 
 
 class Host(Device):
@@ -30,48 +33,63 @@ class HostReceivedPacketEvent(Event):
     Host receives packets from a flow.
     """
 
+    def __init__(self, host, packet):
+        """
+        Sanity check: make sure destination was this Host and that this isn't
+        a RouterPacket.
+        :ivar host: host that receives packet
+        :ivar packet: packet received
+        """
+        Event.__init__(self)
+
+        # Sanity check
+        assert packet.dest_id == host and \
+        packet.packet_id != ROUTER_PACKET_DEFAULT_ID
+
+        self.host = host
+        self.packet = packet
+
     def run(self, main_event_loop, statistics):
         """
-        Sanity check: make sure the destination was this Host,
-        and that this isn’t a RouterPacket. Update statistics.
-
-        :param MainEventLoop main_event_loop: event loop where new Events will
-        be scheduled.
-        :param Statistics statistics: the Statistics to update
+        Put packet in flow_packets_received and sort.
+        Update statistics.
+        :param main_event_loop: event loop where new Events will be scheduled.
+        :param statistics: statistics to update
         """
-        if inspect.isclass(self.flow_packets_received) == RouterPacket:
-            raise ValueError ("Packet received is a router packet.")
-        if self.flow_packets_received.dest_addr != self.address:
-            raise ValueError ("Destination was not this host.")
+        # add packet to host.flow_packets_received
+        self.flow_packets_received[packet.flow_id] = packet.packet_id
+        # if successfully pushed
+        if self.link.push(self.packet, self.dest_dev,
+                          main_event_loop.global_cloc_sec):
+            statistics.link_buffer_occ_change(self, self.packet,
+                                              main_event_loop.global_clock_sec)
         else:
-            #check statistics?
-            pass
+            statistics.link_packet_loss(self.link,
+                                        main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop, statistics):
+    def schedule_new_events(self, main_event_loop):
         """
-        If the packet was an ACK, look up the corresponding Flow and let it
-        know that its packet was received.
-        Schedule a FlowReceivedAckEvent immediately.
-        Populate the AckPacket for selective repeat later.
+        If packet was Ack, look up Flow and say packet was received.
+        Schedule FlowReceivedAckEvent.
+        Populate AckPacket for selective repeat.
 
-        If the packet was a data packet, generate a corresponding ACK and
-        schedule it via a DeviceToLink event unless that packet was already
-        received earlier by this Host.
+        If packet was data packet, generate Ack and schedule via
+        DeviceToLink event unless packet already received earlier.
 
-        For AckPackets, need to set original data packet’s start time so we can
-        calculate RTT later.
-        Also AckPacket’s ID should be the original DataPacket’s ID.
-
-        :param MainEventLoop main_event_loop: event loop where new Events will
-        be scheduled.
-        :param Statistics statistics: the Statistics to update
+        Ackpackets, set original data packet's start time for RTT.
+        AckPacket ID same as DataPacket ID
+        :param main_event_loop: schedule new Events
+        :param statistics: update statistics
         """
-        if inspect.isclass(self.flow_packets_received) == AckPacket:
-            event.schedule_new_events(self, main_event_loop)
-            flow.handle_packet_success(self, packet_id)
-        if inspect.isclass(self.flow_packets_received) == DataPacket and \
-                        packet_id not in self.flow_packets_received:
-            event.schedule_new_events(self, DeviceToLink)
-        else:
-            #check statistics?
-            pass
+
+        if inspect.isclass(self.packet) == AckPacket:
+            main_event_loop.schedule_new_event_with_delay(self, self.flow,
+                                                          self.packet)
+            ack_flow_id = self.packet.flow_id
+            for i in self.flow_packets_received:
+                if self.flow_packets_received[i].flow_id == ack_flow_id:
+                    self.flow_packets_received[i].packet_id = self.packet_id
+        if inspect.isclass(self.packet) == DataPacket and \
+                        self.packet_id not in self.flow_packets_received:
+            a_packet = AckPacket(self.packet)
+            DeviceToLinkEvent(a_packet, self.link, dest_dev)
