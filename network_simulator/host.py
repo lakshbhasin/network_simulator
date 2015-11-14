@@ -6,6 +6,7 @@ from device import *
 from event import *
 from flow import *
 from link import *
+from statistics import *
 
 
 class Host(Device):
@@ -58,13 +59,9 @@ class HostReceivedPacketEvent(Event):
         """
         # add packet to host.flow_packets_received
         self.flow_packets_received[packet.flow_id] = packet.packet_id
-        # if successfully pushed
-        if self.link.push(self.packet, self.dest_dev,
-                          main_event_loop.global_cloc_sec):
-            statistics.link_buffer_occ_change(self, self.packet,
-                                              main_event_loop.global_clock_sec)
-        else:
-            statistics.link_packet_loss(self.link,
+
+        statistics.host_packet_sent(self.host, self.packet)
+        statistics.host_packet_received(self.host, self.packet,
                                         main_event_loop.global_clock_sec)
 
     def schedule_new_events(self, main_event_loop):
