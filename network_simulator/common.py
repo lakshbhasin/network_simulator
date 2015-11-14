@@ -20,7 +20,7 @@ convergence, but short enough to ensure routing is optimal."""
 ROUTING_TABLE_UPDATE_PERIOD = 5.0
 
 """Initial window size for :class:`.Flow`, in packets."""
-INITIAL_WINDOW_SIZE_PACKETS = 1
+INITIAL_WINDOW_SIZE_PACKETS = 1.0
 
 """Initial router packet id of :class:`.RouterPacket` is -1."""
 ROUTER_PACKET_DEFAULT_ID = -1

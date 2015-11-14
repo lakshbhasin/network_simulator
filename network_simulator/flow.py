@@ -55,8 +55,8 @@ class Flow(object):
         :ivar string dest_addr: address of destination Host.
         :ivar Host source: source Host.
         :ivar Host dest: dest Host.
-        :ivar int window_size_packets: The maximum number of packets that can be
-        in transit at a given time.
+        :ivar float window_size_packets: The maximum number of packets that
+        can be in transit at a given time.
         :ivar set<int> packets_in_transit: set of packet IDs that are either
         currently in transit, or *scheduled* to be in transit.
         :ivar list packet_rtts: list of (packet_id, rtt) tuples that stores
@@ -98,7 +98,7 @@ class Flow(object):
 
     def get_window_size(self):
         """
-        :return: current window size in packets
+        :return: (float) current window size in packets
         """
         return self.window_size_packets
 
@@ -191,7 +191,7 @@ class Flow(object):
         packets_in_transit_copy = copy.copy(self.packets_in_transit)
         packets_in_transit_copy.add(packet_id)
 
-        if len(packets_in_transit_copy) > self.window_size_packets:
+        if len(packets_in_transit_copy) > int(self.window_size_packets):
             logger.info("Flow %s could not retransmit packet %d since its "
                         "window size was too small. Will add packet to buffer.")
             self.packet_id_buffer.put_nowait(packet_id)
@@ -217,10 +217,10 @@ class Flow(object):
         """
         curr_window_size = len(self.packets_in_transit)
         packets_to_send = []
-        while curr_window_size < self.window_size_packets:
+        while curr_window_size < int(self.window_size_packets):
             new_packet_id = self.get_next_data_packet_id()
             if self.packet_id_exceeds_data(new_packet_id):
-                # We are out of Packets to send. Semd what's already there.
+                # We are out of Packets to send. Send what's already there.
                 break
 
             new_packet = DataPacket(packet_id=new_packet_id,
@@ -230,6 +230,7 @@ class Flow(object):
                                     start_time_sec=
                                     main_event_loop.global_clock_sec)
             packets_to_send.append(new_packet)
+            curr_window_size += 1
 
         if len(packets_to_send) > 0:
             flow_send_event = FlowSendPacketsEvent(self, packets_to_send)
@@ -378,14 +379,11 @@ class FlowFast(Flow):
         # The formula for the new window size comes from the TCP FAST paper,
         # and accounts for a "slow start"-like phase via the min.
         old_window_size = self.window_size_packets
-        new_window_size = min(2 * old_window_size,
+        new_window_size = min(2.0 * old_window_size,
                               (1.0 - self.gamma) * old_window_size
                               + self.gamma * (self.base_rtt / average_rtt *
                                               old_window_size +
                                               self.alpha))
-
-        # Note rounding down.
-        new_window_size = int(new_window_size)
         self.window_size_packets = new_window_size
 
         logger.info("Flow %s updated window size from %d pkts to %d pkts "
@@ -397,7 +395,7 @@ class InitiateFlowEvent(Event):
     """
     A one-time Event called to set up the Flow at a given timestamp.
     """
-    def __init__(self, flow=None):
+    def __init__(self, flow):
         """
         :ivar Flow flow: flow of this event.
         :ivar list packets_to_send: list of data packets to send. This is
@@ -417,7 +415,8 @@ class InitiateFlowEvent(Event):
         """
         # Get Packet IDs until the window size is met.
         packet_ids = []
-        while len(packet_ids) < self.flow.get_window_size():
+        max_window_size = int(self.flow.get_window_size())
+        while len(packet_ids) < max_window_size:
             next_packet_id = self.flow.get_next_data_packet_id()
             packet_ids.append(next_packet_id)
 
@@ -464,7 +463,7 @@ class PeriodicFlowInterrupt(Event):
         """
         :ivar Flow flow: The Flow whose parameters we periodically update.
         :ivar float time_period_sec: How often (sec) this event will occur.
-        :ivar int old_window_size: the old window size (in Packets).
+        :ivar float old_window_size: the old window size (in Packets).
         """
         super(PeriodicFlowInterrupt, self).__init__()
         assert isinstance(flow, FlowFast)
@@ -497,7 +496,7 @@ class PeriodicFlowInterrupt(Event):
         # Schedule additional packets as needed, to fill in the window size
         # (if it has grown).
         new_window_size = self.flow.get_window_size()
-        if new_window_size > self.old_window_size:
+        if int(new_window_size) > int(self.old_window_size):
             self.flow.send_packets_to_fill_window(main_event_loop)
 
 
@@ -526,7 +525,7 @@ class FlowSendPacketsEvent(Event):
             self.flow.packets_in_transit.add(curr_packet.packet_id)
 
         # Sanity check that packets_in_transit is not too big now.
-        if len(self.flow.packets_in_transit) > self.flow.get_window_size():
+        if len(self.flow.packets_in_transit) > int(self.flow.get_window_size()):
             # This should never happen since we have a Packet ID buffer in
             # place.
             raise ValueError("The size of packets in transit + scheduled "
