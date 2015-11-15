@@ -84,19 +84,23 @@ class AckPacket(Packet):
 class RouterPacket(Packet):
     """
     RouterPacket class: a packet used to update routing tables between Routers.
-    :ivar map device_distances: a map from (Device, Device) to cost,
-        which represents the knowledge that a given Router has about
-        the distance between those two Devices.
+    The information sent is the known *min* cost to travel from "this" Router
+    (i.e. the one generating the packet) and a given Host.
+
+    :ivar map router_to_host_dists: a map from RouterHost to *min* distance (in
+        sec) between the Router and Host. The RouterHost represents the
+        Router generating this packet and the Host represents one of its
+        known Hosts. Costs are *min* costs.
     """
-    def __init__(self, source_id=None,
-                 dest_id=None, start_time_sec=None, device_distances=dict()):
+    def __init__(self, source_id=None, dest_id=None, start_time_sec=None,
+                 router_to_host_dists=dict()):
         Packet.__init__(self, packet_id=ROUTER_PACKET_DEFAULT_ID,
                         flow_id=None,
                         source_id=source_id, dest_id=dest_id,
                         start_time_sec=start_time_sec,
                         size_bits=ROUTER_PACKET_SIZE_BITS)
+        self.router_to_host_dists = router_to_host_dists
 
-        self.device_distances = device_distances
-
-    # TODO(team): __eq__ needs to be fixed after all branches affecting
-    # RouterPacket are merged.
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and \
+            self.router_to_host_dists == other.router_to_host_dists
