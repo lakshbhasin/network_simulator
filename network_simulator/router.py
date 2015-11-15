@@ -229,6 +229,37 @@ class Router(Device):
 
         return self_host_dists_changed
 
+    def broadcast_router_packets(self, main_event_loop):
+        """
+        This function broadcasts RouterPackets to all of this Router's
+        directly-connected Routers. The Packets hold self.self_to_host_dists
+        (in a transformed form). Broadcasts are scheduled asynchronously.
+        :param MainEventLoop main_event_loop: Event loop for scheduling
+            DeviceToLinkEvents asynchronously.
+        """
+        # Map from RouterHost to *min* distance (in sec) between this Router
+        # and that Host. This is just a transformation of self_to_host_dists.
+        router_to_host_dists = dict()
+        for host, dist in self.self_to_host_dists.iteritems():
+            router_to_host_dists[RouterHost(router=self, host=host)] = dist
+
+        # Schedule DeviceToLinkEvent for each connected Router.
+        for link in self.links:
+            destination = link.get_other_end(self)
+            if not isinstance(destination, Router):
+                continue
+
+            router_packet = RouterPacket(source_id=self.address,
+                                         dest_id=destination.address,
+                                         start_time_sec=
+                                         main_event_loop.global_clock_sec,
+                                         router_to_host_dists=
+                                         router_to_host_dists)
+            dev_to_link_ev = DeviceToLinkEvent(packet=router_packet,
+                                               link=link,
+                                               dest_dev=destination)
+            main_event_loop.schedule_event_with_delay(dev_to_link_ev, 0.0)
+
 
 class RouterHost(object):
     """
@@ -251,39 +282,6 @@ class RouterHost(object):
 
     def __hash__(self):
         return hash(self.router) + hash(self.host)
-
-
-def broadcast_router_packets(router, main_event_loop):
-    """
-    Given a Router, this function broadcasts RouterPackets to all of its
-    directly-connected Routers. The Packets hold router.self_to_host_dists
-    (in a transformed form). Broadcasts are scheduled asynchronously.
-    :param Router router: Router broadcasting RouterPackets.
-    :param MainEventLoop main_event_loop: Event loop for scheduling
-        DeviceToLinkEvents asynchronously.
-    """
-    # Map from RouterHost to *min* distance (in sec) between this Router
-    # and that Host. This is just a transformation of self_to_host_dists.
-    router_to_host_dists = dict()
-    for host, dist in router.self_to_host_dists.iteritems():
-        router_to_host_dists[RouterHost(router=router, host=host)] = dist
-
-    # Schedule DeviceToLinkEvent for each connected Router.
-    for link in router.links:
-        destination = link.get_other_end(router)
-        if not isinstance(destination, Router):
-            continue
-
-        router_packet = RouterPacket(source_id=router.address,
-                                     dest_id=destination.address,
-                                     start_time_sec=
-                                     main_event_loop.global_clock_sec,
-                                     router_to_host_dists=
-                                     router_to_host_dists)
-        dev_to_link_ev = DeviceToLinkEvent(packet=router_packet,
-                                           link=link,
-                                           dest_dev=destination)
-        main_event_loop.schedule_event_with_delay(dev_to_link_ev, 0.0)
 
 
 class InitiateRoutingTableUpdateEvent(Event):
@@ -328,7 +326,7 @@ class InitiateRoutingTableUpdateEvent(Event):
         a DeviceToLinkEvent. Also, initiate another RouterReceivedPacketEvent.
         :param main_event_loop:
         """
-        broadcast_router_packets(self.router, main_event_loop)
+        self.router.broadcast_router_packets(main_event_loop)
 
         # Schedule another InitiateRoutingTableUpdateEvent
         init_rt_upd_ev = InitiateRoutingTableUpdateEvent(self.router)
@@ -410,4 +408,4 @@ class RouterReceivedPacketEvent(Event):
         else:
             assert isinstance(self.packet, RouterPacket)
             if self.router_to_host_dists_changed:
-                broadcast_router_packets(self.router, main_event_loop)
+                self.router.broadcast_router_packets(main_event_loop)
