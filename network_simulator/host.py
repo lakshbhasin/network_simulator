@@ -6,6 +6,7 @@ from event import *
 from flow import *
 from link import *
 from statistics import *
+import bisect as b
 
 
 class Host(Device):
@@ -33,21 +34,31 @@ class HostReceivedPacketEvent(Event):
     Host receives packets from a flow.
     """
 
-    def __init__(self, host, packet):
+    def __init__(self, host, packet, packet_previously_received):
         """
         Sanity check: make sure destination was this Host and that this isn't
         a RouterPacket.
-        :ivar host: host that receives packet
-        :ivar packet: packet received
+        :ivar host: Host that receives Packet
+        :ivar packet: Packet received
+        :ivar packet_previously_received: True if Packet previously received
         """
         Event.__init__(self)
 
         # Sanity check
-        assert packet.dest_id == host and \
-        packet.packet_id != ROUTER_PACKET_DEFAULT_ID
-
+        assert packet.dest_id == host.address and not isinstance(packet,
+                                                                 RouterPacket)
         self.host = host
         self.packet = packet
+        self.packet_previously_received = packet_previously_received
+
+    def elem_in_list(elem, my_list):
+        # ind is where this element *would* be inserted
+        # into the list in order to keep it in sorted order.
+        ind = bisect.bisect_left(my_list, elem)
+        if ind != len(my_list) and my_list[ind] == elem:
+            return True
+        else:
+            return False
 
     def run(self, main_event_loop, statistics):
         """
@@ -57,35 +68,51 @@ class HostReceivedPacketEvent(Event):
         :param statistics: statistics to update
         """
         # add packet to host.flow_packets_received
-        self.flow_packets_received[self.packet.flow_id] = self.packet.packet_id
-        self.flow_packets_received.sort()
-        
+        old_packets_received = self.host.flow_packets_received.get(
+            self.packet.flow_id, default=list())
+
+        self.packet_previously_received = elem_in_list(packet.packet_id,
+                                                       old_packets_received)
+        if not self.packet_previously_received:
+            bisect.insort(old_packets_received, self.packet.packet_id)
+            self.host.flow_packets_received[self.packet.flow_id] = \
+                old_packets_received
+
+        else:
+            pass
+
         statistics.host_packet_received(self.host, self.packet,
                                         main_event_loop.global_clock_sec)
 
     def schedule_new_events(self, main_event_loop):
         """
-        If packet was Ack, look up Flow and say packet was received.
         Schedule FlowReceivedAckEvent.
         Populate AckPacket for selective repeat.
 
         If packet was data packet, generate Ack and schedule via
         DeviceToLink event unless packet already received earlier.
 
-        Ackpackets, set original data packet's start time for RTT.
+        AckPackets, set original data packet's start time for RTT.
         AckPacket ID same as DataPacket ID
         :param main_event_loop: schedule new Events
-        :param statistics: update statistics
         """
 
+
         if isinstance(self.packet, AckPacket):
-            main_event_loop.schedule_new_event_with_delay(self, self.flow,
-                                                          self.packet)
-            ack_flow_id = self.packet.flow_id
-            for i in self.flow_packets_received:
-                if self.flow_packets_received[i].flow_id == ack_flow_id:
-                    self.flow_packets_received[i].packet_id = self.packet_id
+            # look up the flow associated with this AckPacket.
+            f = FlowReceivedAckEvent(self.flows[self.packet.flow_id],
+                                     self.packet)
+            main_event_loop.schedule_event_with_delay(f, 0.0)
+
         if isinstance(self.packet, DataPacket) and \
                         self.packet_id not in self.flow_packets_received:
-            a_packet = AckPacket(self.packet)
-            DeviceToLinkEvent(a_packet, self.link, dest_dev)
+            a_packet = AckPacket(self.packet.packet_id, self.packet.flow_id,
+                                 self.host, self.packet.source_id,
+                                 main_event_loop.global_clock_sec,
+                                 self.host.flow_packets_received[
+                                     self.flow_id], self.packet.start_time_sec)
+
+            link = self.host.link
+            d = DeviceToLinkEvent(a_packet, self.host.link, link.get_other_end(
+                self.host))
+            main_event_loop.schedule_event_with_delay(d, 0.0)
