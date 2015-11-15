@@ -73,6 +73,11 @@ class Flow(object):
         been retransmitted (or buffered to retransmit) following an ACK gap (or
         multiple ACK gaps, as in Reno). This is used to make sure we don't
         retransmit the same packet ID multiple times after many gaps.
+        :ivar dict num_timeouts_pending: a map from Packet ID (int) to the
+        number of timeouts that are pending for this Packet (if any). This is
+        used to make sure that, if there are (e.g.) 2 timeouts pending for a
+        Packet, we only respond to the later one. Earlier one corresponds to
+        a lost packet that was then retransmitted.
         """
         self.flow_id = flow_id
         self.source_addr = source_addr
@@ -87,6 +92,7 @@ class Flow(object):
         self.packet_id_buffer = Queue()
         self.max_packet_id_sent = -1  # so first ID sent is 0.
         self.gap_retrans_packets = set()  # TODO(laksh): Check w/ Cody on this
+        self.num_timeouts_pending = dict()  # TODO(laksh): Also check w/ Cody
 
     def packet_id_exceeds_data(self, packet_id):
         """
@@ -127,6 +133,26 @@ class Flow(object):
                                           next_packet_id)
 
         return next_packet_id
+
+    def record_pending_timeout(self, packet_id):
+        """
+        Records that there is a new pending timeout for the given Packet.
+        :param int packet_id: ID of Packet that is being sent.
+        """
+        self.num_timeouts_pending[packet_id] = \
+            self.num_timeouts_pending.get(packet_id, 0) + 1
+
+    def record_received_timeout(self, packet_id):
+        """
+        Records that a timeout was received for the given Packet, and returns
+        the old number of pending timeouts.
+        :param int packet_id: ID of Packet received.
+        :return: The old number of pending timeouts (int), before this call.
+        """
+        assert packet_id in self.num_timeouts_pending
+        old_pending_timeouts = self.num_timeouts_pending[packet_id]
+        self.num_timeouts_pending[packet_id] -= 1
+        return old_pending_timeouts
 
     @abstractmethod
     def handle_packet_loss(self, packet_id, loss_type, main_event_loop):
@@ -177,6 +203,9 @@ class Flow(object):
         if packet.packet_id in self.gap_retrans_packets:
             self.gap_retrans_packets.remove(packet.packet_id)
 
+        # No longer need to do anything on timeouts for this Packet.
+        del self.num_timeouts_pending[packet.packet_id]
+
         # All Flows should record these statistics.
         statistics.flow_packet_received(flow=self, ack_packet=packet,
                                         curr_time=curr_time)
@@ -188,6 +217,9 @@ class Flow(object):
         enough space in the window. Otherwise, the ID is added to a buffer.
         :return True if we were able to immediately schedule a retransmit.
         """
+        # TODO(laksh): Could add ID to gap_retrans_packets *here*, if this
+        # retransmission is due to a gap. Might be cleaner.
+
         # Get size of packets_in_transit if we were to add this Packet.
         packets_in_transit_copy = copy.copy(self.packets_in_transit)
         packets_in_transit_copy.add(packet_id)
@@ -213,8 +245,8 @@ class Flow(object):
 
     def send_packets_to_fill_window(self, main_event_loop):
         """
-        A helper function that sends enough DataPackets to fill the window of
-        the TCP algorithm.
+        A helper function that sends enough DataPackets to fill the current
+        window of the TCP algorithm.
         :param MainEventLoop main_event_loop: event loop for scheduling Events.
         """
         curr_window_size = len(self.packets_in_transit)
@@ -246,11 +278,6 @@ class Flow(object):
                self.flow_id == other.flow_id
 
 
-# TODO(laksh): Flow subclasses for at least two TCP algorithms.
-# TODO(laksh): handle_packet_loss needs to schedule events for timeouts and
-# other losses as well; this is not handled directly in the Event code. Must
-# schedule FlowSendPacketsEvent.
-
 class FlowDummy(Flow):
     """
     A dummy Flow implementation, for testing only. This just maintains a
@@ -277,6 +304,8 @@ class FlowDummy(Flow):
     def handle_packet_loss(self, packet_id, loss_type, main_event_loop):
         super(FlowDummy, self).handle_packet_loss(packet_id, loss_type,
                                                   main_event_loop)
+        if loss_type == PacketLossType.GAP_ACK:
+            self.gap_retrans_packets.add(packet_id)
 
         # Just retransmit the packet if possible (else add to buffer).
         self.retransmit_if_possible(packet_id, main_event_loop)
@@ -744,15 +773,28 @@ class FlowTimeoutPacketEvent(Event):
     def __init__(self, flow, packet):
         """
         :ivar Flow flow: flow of this event.
-        :ivar packet packet: the particular packet of this timeout.
+        :ivar Packet packet: the particular packet of this timeout.
+        :ivar int old_pending_timeouts: The number of timeouts that were
+        pending for this Packet during the run() call. This is used to check
+        whether we need to handle packet losses.
         """
         super(FlowTimeoutPacketEvent, self).__init__()
         self.flow = flow
         self.packet = packet
+        self.old_pending_timeouts = None
+
+        # Tell the Flow that we have a pending timeout for this Packet.
+        flow.record_pending_timeout(packet.packet_id)
 
     def run(self, main_event_loop, statistics):
-        # Does nothing.
-        pass
+        """
+        Records a timeout as received, and stores the old number of pending
+        timeouts (i.e. the number before this run() call).
+        :param main_event_loop: Event loop.
+        :param statistics: Statistics to update.
+        """
+        self.old_pending_timeouts = self.flow.record_received_timeout(
+            self.packet.packet_id)
 
     def schedule_new_events(self, main_event_loop):
         """
@@ -767,7 +809,15 @@ class FlowTimeoutPacketEvent(Event):
         if self.packet.packet_id not in self.flow.packets_in_transit:
             return
 
-        # handle_packet_loss() will schedule additional Events.
+        # If there *was* > 1 pending timeout *before* this timeout occurred,
+        # that means there will be another timeout for this packet. This
+        # means the packet was retransmitted, so we'll respond to the later one.
+        if self.old_pending_timeouts > 1:
+            assert self.packet.packet_id in self.flow.gap_retrans_packets
+            return
+
+        # handle_packet_loss() will schedule additional Events, e.g. packet
+        # sends and timeouts.
         self.flow.handle_packet_loss(self.packet.packet_id,
                                      PacketLossType.TIMEOUT,
                                      main_event_loop)
@@ -856,7 +906,7 @@ class FlowReceivedAckEvent(Event):
         # we've managed to transmit all of the data needed. (If there are
         # losses, retransmits will be needed, so we cannot mark the Flow as
         # done yet).
-        if len(self.lost_packet_ids) == 0 and \
+        if not self.packet.loss_occurred and \
                 len(self.flow.packets_in_transit) == 0:
             # Peek at next Packet ID without updating Flow metadata
             new_packet_id = self.flow.get_next_data_packet_id(peek=True)
