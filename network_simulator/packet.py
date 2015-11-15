@@ -67,6 +67,9 @@ class AckPacket(Packet):
     that have been received by the destination Host.
     This is used to implement selective repeat.
     :ivar float data_packet_start_time_sec: start time of data packet sending.
+    :ivar bool loss_occurred: whether this ACK's flow_packets_received
+    contains gaps that indicate a loss occurred. This is currently set in
+    FlowReceivedAckEvent.
     """
 
     def __init__(self, packet_id=None, flow_id=None, source_id=None,
@@ -79,6 +82,7 @@ class AckPacket(Packet):
 
         self.flow_packets_received = flow_packets_received
         self.data_packet_start_time_sec = data_packet_start_time_sec
+        self.loss_occurred = False  # is set in flow.py
 
 
 class RouterPacket(Packet):

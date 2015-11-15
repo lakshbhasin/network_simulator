@@ -49,3 +49,8 @@ TCP_FAST_UPDATE_PERIOD_SEC = 0.1
 Default max number of packets to average in computing RTTs for TCP algorithms.
 """
 TCP_NUM_PACKETS_AVE_FOR_RTT = 40
+
+"""
+Default initial slow start threshold (in packets) for TCP algorithms.
+"""
+TCP_INITIAL_SS_THRESH = 32.0
