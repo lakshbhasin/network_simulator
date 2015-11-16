@@ -6,6 +6,8 @@ __pycache__/
 .idea/
 build/*
 dist/*
+data/*
+log/*
 network_simulator.egg-info/*
 
 # Ignore TXT log files

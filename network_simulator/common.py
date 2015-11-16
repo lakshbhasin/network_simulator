@@ -25,6 +25,10 @@ INITIAL_WINDOW_SIZE_PACKETS = 1.0
 """Initial router packet id of :class:`.RouterPacket` is -1."""
 ROUTER_PACKET_DEFAULT_ID = -1
 
+"""Conversion to/from bits <-> KB, MB"""
+KILOBYTE = 8 * 1024
+MEGABYTE = 1024 * KILOBYTE
+
 """Flow's packet timeout limit in seconds."""
 # TODO(team): What should this number be?
 FLOW_TIMEOUT_SEC = 1
