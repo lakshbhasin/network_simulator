@@ -228,7 +228,6 @@ class LinkSendEvent(Event):
                     propagation_delay + transmission_delay)
         else:
             assert isinstance(self.buffer_elem.dest_dev, Host)
-            # HostReceivedPacketEvent signature
             main_event_loop.schedule_event_with_delay(
                     HostReceivedPacketEvent(host=self.buffer_elem.dest_dev,
                                             packet=self.buffer_elem.packet),

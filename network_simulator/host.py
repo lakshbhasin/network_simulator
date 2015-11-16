@@ -72,6 +72,8 @@ class HostReceivedPacketEvent(Event):
                 self.packet.packet_id, old_packets_received)
 
             if not self.packet_previously_received:
+                # bisect.insort uses O(log(n)) time binary search to find the
+                # insertion time with a worst case of O(n) insertion.
                 bisect.insort(old_packets_received, self.packet.packet_id)
                 self.host.flow_packets_received[self.packet.flow_id] = \
                     old_packets_received
@@ -125,9 +127,11 @@ class HostReceivedPacketEvent(Event):
 def elem_in_list(elem, my_list):
     """
     This function takes an element and a list, and returns True if elem
-    is in the list, and False if it is not in the list.
+    is in the list, and False if it is not in the list. This uses binary
+    search and thus takes O(log(n)) time.
     :param elem: the element to be checked
     :param my_list: the list where the element is placed into
+    :return: True if elem is in my_list.
     """
     # ind is where this element *would* be inserted
     # into the list in order to keep it in sorted order.
