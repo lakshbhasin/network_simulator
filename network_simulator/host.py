@@ -97,7 +97,7 @@ class HostReceivedPacketEvent(Event):
         """
         if isinstance(self.packet, AckPacket):
             # look up the flow associated with this AckPacket.
-            flow_ack_ev = FlowReceivedAckEvent(self.flows[
+            flow_ack_ev = FlowReceivedAckEvent(self.host.flows[
                                                    self.packet.flow_id],
                                                self.packet)
             main_event_loop.schedule_event_with_delay(flow_ack_ev, 0.0)
@@ -111,7 +111,8 @@ class HostReceivedPacketEvent(Event):
                                  start_time_sec=
                                  main_event_loop.global_clock_sec,
                                  flow_packets_received=
-                                 self.host.flow_packets_received[self.flow_id],
+                                 self.host.flow_packets_received[
+                                     self.packet.flow_id],
                                  data_packet_start_time_sec=
                                  self.packet.start_time_sec)
 
