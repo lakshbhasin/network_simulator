@@ -228,9 +228,10 @@ class LinkSendEvent(Event):
                     propagation_delay + transmission_delay)
         else:
             assert isinstance(self.buffer_elem.dest_dev, Host)
-            # TODO(Dave): HostReceivedPacketEvent signature
+            # HostReceivedPacketEvent signature
             main_event_loop.schedule_event_with_delay(
-                    HostReceivedPacketEvent(0),
+                    HostReceivedPacketEvent(host=self.buffer_elem.dest_dev,
+                                            packet=self.buffer_elem.packet),
                     propagation_delay + transmission_delay)
 
         if self.link.link_buffer.queue.empty():
