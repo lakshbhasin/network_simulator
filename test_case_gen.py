@@ -1,5 +1,12 @@
 """
-Generates Test Cases 0, 1 and saves them to json
+Usage:
+    python2 test_case_gen.py
+
+Generates Topologies for Test Cases 0, 1, 2 each using three different
+congestion control algorithms (Dummy (always window size 1), Reno, FAST) and
+saves them to json.
+
+json's are stored in data/test_case_<number>_<flow type>.json
 """
 from network_simulator.network_topology import *
 from network_simulator.host import *
