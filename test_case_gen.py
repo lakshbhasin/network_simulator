@@ -20,7 +20,7 @@ if __name__ == "__main__":
     links = list()
     l1 = Link(end_1_addr = "H1", end_2_addr = "H2", link_buffer =
             LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
     links.append(l1)
 
     hosts = list()
@@ -69,26 +69,30 @@ if __name__ == "__main__":
     r2 = Router("R2")
     r3 = Router("R3")
     r4 = Router("R4")
+    routers.append(r1)
+    routers.append(r2)
+    routers.append(r3)
+    routers.append(r4)
 
     links = list()
     l0 = Link(end_1_addr = "H1", end_2_addr = "R1", link_buffer =
             LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
     l1 = Link(end_1_addr = "R1", end_2_addr = "R2", link_buffer =
             LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
     l2 = Link(end_1_addr = "R1", end_2_addr = "R3", link_buffer =
             LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
     l3 = Link(end_1_addr = "R2", end_2_addr = "R4", link_buffer =
             LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
     l4 = Link(end_1_addr = "R3", end_2_addr = "R4", link_buffer =
             LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
     l5 = Link(end_1_addr = "R4", end_2_addr = "H2", link_buffer =
             LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
     links.append(l0)
     links.append(l1)
     links.append(l2)
@@ -146,39 +150,43 @@ if __name__ == "__main__":
     r2 = Router("R2")
     r3 = Router("R3")
     r4 = Router("R4")
+    routers.append(r1)
+    routers.append(r2)
+    routers.append(r3)
+    routers.append(r4)
 
     # router-router
     links = list()
     l1 = Link(end_1_addr = "R1", end_2_addr = "R2", link_buffer =
             LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
     l2 = Link(end_1_addr = "R2", end_2_addr = "R3", link_buffer =
             LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
     l3 = Link(end_1_addr = "R3", end_2_addr = "R4", link_buffer =
             LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
     links.append(l1)
     links.append(l2)
     links.append(l3)
     lh1 = Link(end_1_addr = "S1", end_2_addr = "R1", link_buffer =
             LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
     lh2 = Link(end_1_addr = "T1", end_2_addr = "R4", link_buffer =
             LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
     lh3 = Link(end_1_addr = "S2", end_2_addr = "R1", link_buffer =
             LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
     lh4 = Link(end_1_addr = "T2", end_2_addr = "R2", link_buffer =
             LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
     lh5 = Link(end_1_addr = "S3", end_2_addr = "R3", link_buffer =
             LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
     lh6 = Link(end_1_addr = "T3", end_2_addr = "R4", link_buffer =
             LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABYTE)
+            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
     links.append(lh1)
     links.append(lh2)
     links.append(lh3)

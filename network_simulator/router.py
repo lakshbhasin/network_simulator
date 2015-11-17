@@ -36,7 +36,7 @@ class Router(Device):
     :ivar list neighbors: a list of Devices directly connected to this
         Router. This is assumed to not change over time (i.e. no destruction).
     """
-    def __init__(self, address=None, links=[]):
+    def __init__(self, address, links=None):
         Device.__init__(self, address)
         self.new_routing_table = dict()
         self.stable_routing_table = None
@@ -47,16 +47,17 @@ class Router(Device):
 
         # Compute neighbors based on links.
         neighbors = []
-        for link in self.links:
-            # Neighbor associated with Link (i.e. Device on the other side).
-            neighbor = link.get_other_end(self)
-            neighbors.append(neighbor)
-        self.neighbors = neighbors
+        if self.links is not None:
+            for link in self.links:
+                # Neighbor associated with Link (i.e. Device on the other side).
+                neighbor = link.get_other_end(self)
+                neighbors.append(neighbor)
+            self.neighbors = neighbors
 
-        # Update self --> neighbor distances based on connected Links,
-        # and calculate initial routing table based on just this data.
-        self.self_to_neighb_dists = dict()
-        self.update_routing_table(update_self_to_neighbor_dists=True)
+            # Update self --> neighbor distances based on connected Links,
+            # and calculate initial routing table based on just this data.
+            self.self_to_neighb_dists = dict()
+            self.update_routing_table(update_self_to_neighbor_dists=True)
 
     def update_self_neighbor_dists(self):
         """

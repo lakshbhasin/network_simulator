@@ -9,7 +9,7 @@ class Device(object):
 
     :ivar str address: address of this device.
     """
-    def __init__(self, address=None):
+    def __init__(self, address):
         self.address = address
 
     def __hash__(self):

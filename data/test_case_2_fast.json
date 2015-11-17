@@ -1,0 +1,336 @@
+{
+    "py/object": "network_simulator.network_topology.NetworkTopology", 
+    "routers": [
+        {
+            "py/object": "network_simulator.router.Router", 
+            "new_routing_table": {}, 
+            "last_table_update_timestamp": 0.0, 
+            "links": null, 
+            "self_to_host_dists": {}, 
+            "stable_routing_table": null, 
+            "address": "R1", 
+            "neighb_to_host_dists": {}
+        }, 
+        {
+            "py/object": "network_simulator.router.Router", 
+            "new_routing_table": {}, 
+            "last_table_update_timestamp": 0.0, 
+            "links": null, 
+            "self_to_host_dists": {}, 
+            "stable_routing_table": null, 
+            "address": "R2", 
+            "neighb_to_host_dists": {}
+        }, 
+        {
+            "py/object": "network_simulator.router.Router", 
+            "new_routing_table": {}, 
+            "last_table_update_timestamp": 0.0, 
+            "links": null, 
+            "self_to_host_dists": {}, 
+            "stable_routing_table": null, 
+            "address": "R3", 
+            "neighb_to_host_dists": {}
+        }, 
+        {
+            "py/object": "network_simulator.router.Router", 
+            "new_routing_table": {}, 
+            "last_table_update_timestamp": 0.0, 
+            "links": null, 
+            "self_to_host_dists": {}, 
+            "stable_routing_table": null, 
+            "address": "R4", 
+            "neighb_to_host_dists": {}
+        }
+    ], 
+    "hosts": [
+        {
+            "py/object": "network_simulator.host.Host", 
+            "flow_packets_received": {}, 
+            "link": null, 
+            "flows": null, 
+            "address": "S1"
+        }, 
+        {
+            "py/object": "network_simulator.host.Host", 
+            "flow_packets_received": {}, 
+            "link": null, 
+            "flows": null, 
+            "address": "S2"
+        }, 
+        {
+            "py/object": "network_simulator.host.Host", 
+            "flow_packets_received": {}, 
+            "link": null, 
+            "flows": null, 
+            "address": "S3"
+        }, 
+        {
+            "py/object": "network_simulator.host.Host", 
+            "flow_packets_received": {}, 
+            "link": null, 
+            "flows": null, 
+            "address": "T1"
+        }, 
+        {
+            "py/object": "network_simulator.host.Host", 
+            "flow_packets_received": {}, 
+            "link": null, 
+            "flows": null, 
+            "address": "T2"
+        }, 
+        {
+            "py/object": "network_simulator.host.Host", 
+            "flow_packets_received": {}, 
+            "link": null, 
+            "flows": null, 
+            "address": "T3"
+        }
+    ], 
+    "flows": [
+        {
+            "py/object": "network_simulator.flow.FlowFast", 
+            "packet_id_buffer": {
+                "py/object": "Queue.Queue"
+            }, 
+            "source_addr": "S1", 
+            "num_packets_ave_for_rtt": 40, 
+            "gap_retrans_packets": {
+                "py/set": []
+            }, 
+            "dest": null, 
+            "data_size_bits": 293601280, 
+            "packet_rtts": [], 
+            "start_time_sec": 0.5, 
+            "source": null, 
+            "alpha": 2.0, 
+            "num_timeouts_pending": {}, 
+            "max_packet_id_sent": -1, 
+            "flow_id": "F1", 
+            "dest_addr": "T1", 
+            "window_size_packets": 1.0, 
+            "base_rtt": null, 
+            "packets_in_transit": {
+                "py/set": []
+            }, 
+            "gamma": 0.5
+        }, 
+        {
+            "py/object": "network_simulator.flow.FlowFast", 
+            "packet_id_buffer": {
+                "py/object": "Queue.Queue"
+            }, 
+            "source_addr": "S2", 
+            "num_packets_ave_for_rtt": 40, 
+            "gap_retrans_packets": {
+                "py/set": []
+            }, 
+            "dest": null, 
+            "data_size_bits": 125829120, 
+            "packet_rtts": [], 
+            "start_time_sec": 10, 
+            "source": null, 
+            "alpha": 2.0, 
+            "num_timeouts_pending": {}, 
+            "max_packet_id_sent": -1, 
+            "flow_id": "F2", 
+            "dest_addr": "T2", 
+            "window_size_packets": 1.0, 
+            "base_rtt": null, 
+            "packets_in_transit": {
+                "py/set": []
+            }, 
+            "gamma": 0.5
+        }, 
+        {
+            "py/object": "network_simulator.flow.FlowFast", 
+            "packet_id_buffer": {
+                "py/object": "Queue.Queue"
+            }, 
+            "source_addr": "S3", 
+            "num_packets_ave_for_rtt": 40, 
+            "gap_retrans_packets": {
+                "py/set": []
+            }, 
+            "dest": null, 
+            "data_size_bits": 251658240, 
+            "packet_rtts": [], 
+            "start_time_sec": 20, 
+            "source": null, 
+            "alpha": 2.0, 
+            "num_timeouts_pending": {}, 
+            "max_packet_id_sent": -1, 
+            "flow_id": "F3", 
+            "dest_addr": "T3", 
+            "window_size_packets": 1.0, 
+            "base_rtt": null, 
+            "packets_in_transit": {
+                "py/set": []
+            }, 
+            "gamma": 0.5
+        }
+    ], 
+    "links": [
+        {
+            "py/object": "network_simulator.link.Link", 
+            "static_delay_sec": 0.01, 
+            "busy": false, 
+            "end_1_device": null, 
+            "end_2_device": null, 
+            "end_1_addr": "R1", 
+            "end_2_addr": "R2", 
+            "capacity_bps": 10485760, 
+            "link_buffer": {
+                "py/object": "network_simulator.link.LinkBuffer", 
+                "max_buffer_size_bits": 1048576, 
+                "queue": {
+                    "py/object": "Queue.Queue"
+                }, 
+                "curr_buffer_size_bits": 0
+            }
+        }, 
+        {
+            "py/object": "network_simulator.link.Link", 
+            "static_delay_sec": 0.01, 
+            "busy": false, 
+            "end_1_device": null, 
+            "end_2_device": null, 
+            "end_1_addr": "R2", 
+            "end_2_addr": "R3", 
+            "capacity_bps": 10485760, 
+            "link_buffer": {
+                "py/object": "network_simulator.link.LinkBuffer", 
+                "max_buffer_size_bits": 1048576, 
+                "queue": {
+                    "py/id": 21
+                }, 
+                "curr_buffer_size_bits": 0
+            }
+        }, 
+        {
+            "py/object": "network_simulator.link.Link", 
+            "static_delay_sec": 0.01, 
+            "busy": false, 
+            "end_1_device": null, 
+            "end_2_device": null, 
+            "end_1_addr": "R3", 
+            "end_2_addr": "R4", 
+            "capacity_bps": 10485760, 
+            "link_buffer": {
+                "py/object": "network_simulator.link.LinkBuffer", 
+                "max_buffer_size_bits": 1048576, 
+                "queue": {
+                    "py/id": 21
+                }, 
+                "curr_buffer_size_bits": 0
+            }
+        }, 
+        {
+            "py/object": "network_simulator.link.Link", 
+            "static_delay_sec": 0.01, 
+            "busy": false, 
+            "end_1_device": null, 
+            "end_2_device": null, 
+            "end_1_addr": "S1", 
+            "end_2_addr": "R1", 
+            "capacity_bps": 13107200.0, 
+            "link_buffer": {
+                "py/object": "network_simulator.link.LinkBuffer", 
+                "max_buffer_size_bits": 1048576, 
+                "queue": {
+                    "py/id": 21
+                }, 
+                "curr_buffer_size_bits": 0
+            }
+        }, 
+        {
+            "py/object": "network_simulator.link.Link", 
+            "static_delay_sec": 0.01, 
+            "busy": false, 
+            "end_1_device": null, 
+            "end_2_device": null, 
+            "end_1_addr": "T1", 
+            "end_2_addr": "R4", 
+            "capacity_bps": 13107200.0, 
+            "link_buffer": {
+                "py/object": "network_simulator.link.LinkBuffer", 
+                "max_buffer_size_bits": 1048576, 
+                "queue": {
+                    "py/id": 21
+                }, 
+                "curr_buffer_size_bits": 0
+            }
+        }, 
+        {
+            "py/object": "network_simulator.link.Link", 
+            "static_delay_sec": 0.01, 
+            "busy": false, 
+            "end_1_device": null, 
+            "end_2_device": null, 
+            "end_1_addr": "S2", 
+            "end_2_addr": "R1", 
+            "capacity_bps": 13107200.0, 
+            "link_buffer": {
+                "py/object": "network_simulator.link.LinkBuffer", 
+                "max_buffer_size_bits": 1048576, 
+                "queue": {
+                    "py/id": 21
+                }, 
+                "curr_buffer_size_bits": 0
+            }
+        }, 
+        {
+            "py/object": "network_simulator.link.Link", 
+            "static_delay_sec": 0.01, 
+            "busy": false, 
+            "end_1_device": null, 
+            "end_2_device": null, 
+            "end_1_addr": "T2", 
+            "end_2_addr": "R2", 
+            "capacity_bps": 13107200.0, 
+            "link_buffer": {
+                "py/object": "network_simulator.link.LinkBuffer", 
+                "max_buffer_size_bits": 1048576, 
+                "queue": {
+                    "py/id": 21
+                }, 
+                "curr_buffer_size_bits": 0
+            }
+        }, 
+        {
+            "py/object": "network_simulator.link.Link", 
+            "static_delay_sec": 0.01, 
+            "busy": false, 
+            "end_1_device": null, 
+            "end_2_device": null, 
+            "end_1_addr": "S3", 
+            "end_2_addr": "R3", 
+            "capacity_bps": 13107200.0, 
+            "link_buffer": {
+                "py/object": "network_simulator.link.LinkBuffer", 
+                "max_buffer_size_bits": 1048576, 
+                "queue": {
+                    "py/id": 21
+                }, 
+                "curr_buffer_size_bits": 0
+            }
+        }, 
+        {
+            "py/object": "network_simulator.link.Link", 
+            "static_delay_sec": 0.01, 
+            "busy": false, 
+            "end_1_device": null, 
+            "end_2_device": null, 
+            "end_1_addr": "T3", 
+            "end_2_addr": "R4", 
+            "capacity_bps": 13107200.0, 
+            "link_buffer": {
+                "py/object": "network_simulator.link.LinkBuffer", 
+                "max_buffer_size_bits": 1048576, 
+                "queue": {
+                    "py/id": 21
+                }, 
+                "curr_buffer_size_bits": 0
+            }
+        }
+    ]
+}
