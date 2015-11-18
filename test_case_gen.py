@@ -18,9 +18,9 @@ from network_simulator.link import *
 if __name__ == "__main__":
     # test case 0
     links = list()
-    l1 = Link(end_1_addr = "H1", end_2_addr = "H2", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
+    l1 = Link(name="L1", end_1_addr="H1", end_2_addr="H2",
+              link_buffer=LinkBuffer(max_buffer_size_bits=64.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=10.0 * MEGABIT)
     links.append(l1)
 
     hosts = list()
@@ -31,30 +31,30 @@ if __name__ == "__main__":
 
     # generate for FlowDummy
     flows = list()
-    f1 = FlowDummy(flow_id = "F1", source_addr = "H1", dest_addr = "H2",
-                                  data_size_bits = 20 * MEGABYTE,
-                                  start_time_sec = 1)
+    f1 = FlowDummy(flow_id="F1", source_addr="H1", dest_addr="H2",
+                   data_size_bits=20.0 * MEGABYTE,
+                   start_time_sec=1)
     flows.append(f1)
 
-    network = NetworkTopology(links = links, flows = flows, hosts = hosts)
+    network = NetworkTopology(links=links, flows=flows, hosts=hosts)
     network.write_to_json("data/test_case_0_dummy.json")
 
     # generate for FlowReno
     flows = list()
-    f1 = FlowReno(flow_id = "F1", source_addr = "H1", dest_addr = "H2",
-                                  data_size_bits = 20 * MEGABYTE,
-                                  start_time_sec = 1)
+    f1 = FlowReno(flow_id="F1", source_addr="H1", dest_addr="H2",
+                  data_size_bits=20.0 * MEGABYTE,
+                  start_time_sec=1)
     flows.append(f1)
-    network = NetworkTopology(links = links, flows = flows, hosts = hosts)
+    network = NetworkTopology(links=links, flows=flows, hosts=hosts)
     network.write_to_json("data/test_case_0_reno.json")
 
     # generate for FlowFast
     flows = list()
-    f1 = FlowFast(flow_id = "F1", source_addr = "H1", dest_addr = "H2",
-                                  data_size_bits = 20 * MEGABYTE,
-                                  start_time_sec = 1)
+    f1 = FlowFast(flow_id="F1", source_addr="H1", dest_addr="H2",
+                  data_size_bits=20.0 * MEGABYTE,
+                  start_time_sec=1)
     flows.append(f1)
-    network = NetworkTopology(links = links, flows = flows, hosts = hosts)
+    network = NetworkTopology(links=links, flows=flows, hosts=hosts)
     network.write_to_json("data/test_case_0_fast.json")
 
     # test case 1
@@ -75,24 +75,24 @@ if __name__ == "__main__":
     routers.append(r4)
 
     links = list()
-    l0 = Link(end_1_addr = "H1", end_2_addr = "R1", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
-    l1 = Link(end_1_addr = "R1", end_2_addr = "R2", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
-    l2 = Link(end_1_addr = "R1", end_2_addr = "R3", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
-    l3 = Link(end_1_addr = "R2", end_2_addr = "R4", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
-    l4 = Link(end_1_addr = "R3", end_2_addr = "R4", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
-    l5 = Link(end_1_addr = "R4", end_2_addr = "H2", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 64 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
+    l0 = Link(name="L0", end_1_addr="H1", end_2_addr="R1",
+              link_buffer=LinkBuffer(max_buffer_size_bits=64.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=12.5 * MEGABIT)
+    l1 = Link(name="L1", end_1_addr="R1", end_2_addr="R2",
+              link_buffer=LinkBuffer(max_buffer_size_bits=64.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=10.0 * MEGABIT)
+    l2 = Link(name="L2", end_1_addr="R1", end_2_addr="R3",
+              link_buffer=LinkBuffer(max_buffer_size_bits=64.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=10.0 * MEGABIT)
+    l3 = Link(name="L3", end_1_addr="R2", end_2_addr="R4",
+              link_buffer=LinkBuffer(max_buffer_size_bits=64.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=10.0 * MEGABIT)
+    l4 = Link(name="L4", end_1_addr="R3", end_2_addr="R4",
+              link_buffer=LinkBuffer(max_buffer_size_bits=64.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=10.0 * MEGABIT)
+    l5 = Link(name="L5", end_1_addr="R4", end_2_addr="H2",
+              link_buffer=LinkBuffer(max_buffer_size_bits=64.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=12.5 * MEGABIT)
     links.append(l0)
     links.append(l1)
     links.append(l2)
@@ -102,32 +102,32 @@ if __name__ == "__main__":
 
     # Dummy
     flows = list()
-    f1 = FlowDummy(flow_id = "F1", source_addr = "H1", dest_addr = "H2",
-                                  data_size_bits = 20 * MEGABYTE,
-                                  start_time_sec = 0.5)
+    f1 = FlowDummy(flow_id="F1", source_addr="H1", dest_addr="H2",
+                   data_size_bits=20.0 * MEGABYTE,
+                   start_time_sec=0.5)
     flows.append(f1)
-    network = NetworkTopology(links = links, flows = flows, hosts = hosts, 
-            routers = routers)
+    network = NetworkTopology(links=links, flows=flows, hosts=hosts,
+                              routers=routers)
     network.write_to_json("data/test_case_1_dummy.json")
 
     # Reno
     flows = list()
-    f1 = FlowReno(flow_id = "F1", source_addr = "H1", dest_addr = "H2",
-                                  data_size_bits = 20 * MEGABYTE,
-                                  start_time_sec = 0.5)
+    f1 = FlowReno(flow_id="F1", source_addr="H1", dest_addr="H2",
+                  data_size_bits=20.0 * MEGABYTE,
+                  start_time_sec=0.5)
     flows.append(f1)
-    network = NetworkTopology(links = links, flows = flows, hosts = hosts, 
-            routers = routers)
+    network = NetworkTopology(links=links, flows=flows, hosts=hosts,
+                              routers=routers)
     network.write_to_json("data/test_case_1_reno.json")
 
     # FAST
     flows = list()
-    f1 = FlowFast(flow_id = "F1", source_addr = "H1", dest_addr = "H2",
-                                  data_size_bits = 20 * MEGABYTE,
-                                  start_time_sec = 0.5)
+    f1 = FlowFast(flow_id="F1", source_addr="H1", dest_addr="H2",
+                  data_size_bits=20.0 * MEGABYTE,
+                  start_time_sec=0.5)
     flows.append(f1)
-    network = NetworkTopology(links = links, flows = flows, hosts = hosts, 
-            routers = routers)
+    network = NetworkTopology(links=links, flows=flows, hosts=hosts,
+                              routers=routers)
     network.write_to_json("data/test_case_1_fast.json")
 
     # test case 2
@@ -157,36 +157,36 @@ if __name__ == "__main__":
 
     # router-router
     links = list()
-    l1 = Link(end_1_addr = "R1", end_2_addr = "R2", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
-    l2 = Link(end_1_addr = "R2", end_2_addr = "R3", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
-    l3 = Link(end_1_addr = "R3", end_2_addr = "R4", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 10 * MEGABIT)
-    links.append(l1)
-    links.append(l2)
-    links.append(l3)
-    lh1 = Link(end_1_addr = "S1", end_2_addr = "R1", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
-    lh2 = Link(end_1_addr = "T1", end_2_addr = "R4", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
-    lh3 = Link(end_1_addr = "S2", end_2_addr = "R1", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
-    lh4 = Link(end_1_addr = "T2", end_2_addr = "R2", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
-    lh5 = Link(end_1_addr = "S3", end_2_addr = "R3", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
-    lh6 = Link(end_1_addr = "T3", end_2_addr = "R4", link_buffer =
-            LinkBuffer(max_buffer_size_bits = 128 * KILOBYTE),
-            static_delay_sec = 0.01, capacity_bps = 12.5 * MEGABIT)
+    ls1 = Link(name="LS1", end_1_addr="R1", end_2_addr="R2",
+              link_buffer=LinkBuffer(max_buffer_size_bits=128.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=10.0 * MEGABIT)
+    ls2 = Link(name="LS2", end_1_addr="R2", end_2_addr="R3",
+              link_buffer=LinkBuffer(max_buffer_size_bits=128.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=10.0 * MEGABIT)
+    ls3 = Link(name="LS3", end_1_addr="R3", end_2_addr="R4",
+              link_buffer=LinkBuffer(max_buffer_size_bits=128.0 * KILOBYTE),
+              static_delay_sec=0.01, capacity_bps=10.0 * MEGABIT)
+    links.append(ls1)
+    links.append(ls2)
+    links.append(ls3)
+    lh1 = Link(name="LH1", end_1_addr="S1", end_2_addr="R1",
+               link_buffer=LinkBuffer(max_buffer_size_bits=128.0 * KILOBYTE),
+               static_delay_sec=0.01, capacity_bps=12.5 * MEGABIT)
+    lh2 = Link(name="LH2", end_1_addr="T1", end_2_addr="R4",
+               link_buffer=LinkBuffer(max_buffer_size_bits=128.0 * KILOBYTE),
+               static_delay_sec=0.01, capacity_bps=12.5 * MEGABIT)
+    lh3 = Link(name="LH3", end_1_addr="S2", end_2_addr="R1",
+               link_buffer=LinkBuffer(max_buffer_size_bits=128.0 * KILOBYTE),
+               static_delay_sec=0.01, capacity_bps=12.5 * MEGABIT)
+    lh4 = Link(name="LH4", end_1_addr="T2", end_2_addr="R2",
+               link_buffer=LinkBuffer(max_buffer_size_bits=128.0 * KILOBYTE),
+               static_delay_sec=0.01, capacity_bps=12.5 * MEGABIT)
+    lh5 = Link(name="LH5", end_1_addr="S3", end_2_addr="R3",
+               link_buffer=LinkBuffer(max_buffer_size_bits=128.0 * KILOBYTE),
+               static_delay_sec=0.01, capacity_bps=12.5 * MEGABIT)
+    lh6 = Link(name="LH6", end_1_addr="T3", end_2_addr="R4",
+               link_buffer=LinkBuffer(max_buffer_size_bits=128.0 * KILOBYTE),
+               static_delay_sec=0.01, capacity_bps=12.5 * MEGABIT)
     links.append(lh1)
     links.append(lh2)
     links.append(lh3)
@@ -196,54 +196,54 @@ if __name__ == "__main__":
 
     # Dummy
     flows = list()
-    f1 = FlowDummy(flow_id = "F1", source_addr = "S1", dest_addr = "T1",
-                                  data_size_bits = 35 * MEGABYTE,
-                                  start_time_sec = 0.5)
-    f2 = FlowDummy(flow_id = "F2", source_addr = "S2", dest_addr = "T2",
-                                  data_size_bits = 15 * MEGABYTE,
-                                  start_time_sec = 10)
-    f3 = FlowDummy(flow_id = "F3", source_addr = "S3", dest_addr = "T3",
-                                  data_size_bits = 30 * MEGABYTE,
-                                  start_time_sec = 20)
+    f1 = FlowDummy(flow_id="F1", source_addr="S1", dest_addr="T1",
+                   data_size_bits=35.0 * MEGABYTE,
+                   start_time_sec=0.5)
+    f2 = FlowDummy(flow_id="F2", source_addr="S2", dest_addr="T2",
+                   data_size_bits=15.0 * MEGABYTE,
+                   start_time_sec=10)
+    f3 = FlowDummy(flow_id="F3", source_addr="S3", dest_addr="T3",
+                   data_size_bits=30.0 * MEGABYTE,
+                   start_time_sec=20)
     flows.append(f1)
     flows.append(f2)
     flows.append(f3)
-    network = NetworkTopology(links = links, flows = flows, hosts = hosts, 
-            routers = routers)
+    network = NetworkTopology(links=links, flows=flows, hosts=hosts,
+                              routers=routers)
     network.write_to_json("data/test_case_2_dummy.json")
 
     # Reno
     flows = list()
-    f1 = FlowReno(flow_id = "F1", source_addr = "S1", dest_addr = "T1",
-                                  data_size_bits = 35 * MEGABYTE,
-                                  start_time_sec = 0.5)
-    f2 = FlowReno(flow_id = "F2", source_addr = "S2", dest_addr = "T2",
-                                  data_size_bits = 15 * MEGABYTE,
-                                  start_time_sec = 10)
-    f3 = FlowReno(flow_id = "F3", source_addr = "S3", dest_addr = "T3",
-                                  data_size_bits = 30 * MEGABYTE,
-                                  start_time_sec = 20)
+    f1 = FlowReno(flow_id="F1", source_addr="S1", dest_addr="T1",
+                  data_size_bits=35.0 * MEGABYTE,
+                  start_time_sec=0.5)
+    f2 = FlowReno(flow_id="F2", source_addr="S2", dest_addr="T2",
+                  data_size_bits=15.0 * MEGABYTE,
+                  start_time_sec=10)
+    f3 = FlowReno(flow_id="F3", source_addr="S3", dest_addr="T3",
+                  data_size_bits=30.0 * MEGABYTE,
+                  start_time_sec=20)
     flows.append(f1)
     flows.append(f2)
     flows.append(f3)
-    network = NetworkTopology(links = links, flows = flows, hosts = hosts, 
-            routers = routers)
+    network = NetworkTopology(links=links, flows=flows, hosts=hosts,
+                              routers=routers)
     network.write_to_json("data/test_case_2_reno.json")
 
     # FAST
     flows = list()
-    f1 = FlowFast(flow_id = "F1", source_addr = "S1", dest_addr = "T1",
-                                  data_size_bits = 35 * MEGABYTE,
-                                  start_time_sec = 0.5)
-    f2 = FlowFast(flow_id = "F2", source_addr = "S2", dest_addr = "T2",
-                                  data_size_bits = 15 * MEGABYTE,
-                                  start_time_sec = 10)
-    f3 = FlowFast(flow_id = "F3", source_addr = "S3", dest_addr = "T3",
-                                  data_size_bits = 30 * MEGABYTE,
-                                  start_time_sec = 20)
+    f1 = FlowFast(flow_id="F1", source_addr="S1", dest_addr="T1",
+                  data_size_bits=35.0 * MEGABYTE,
+                  start_time_sec=0.5)
+    f2 = FlowFast(flow_id="F2", source_addr="S2", dest_addr="T2",
+                  data_size_bits=15.0 * MEGABYTE,
+                  start_time_sec=10)
+    f3 = FlowFast(flow_id="F3", source_addr="S3", dest_addr="T3",
+                  data_size_bits=30.0 * MEGABYTE,
+                  start_time_sec=20)
     flows.append(f1)
     flows.append(f2)
     flows.append(f3)
-    network = NetworkTopology(links = links, flows = flows, hosts = hosts, 
-            routers = routers)
+    network = NetworkTopology(links=links, flows=flows, hosts=hosts,
+                              routers=routers)
     network.write_to_json("data/test_case_2_fast.json")

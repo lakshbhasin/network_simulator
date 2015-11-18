@@ -97,7 +97,7 @@
                 "py/set": []
             }, 
             "dest": null, 
-            "data_size_bits": 293601280, 
+            "data_size_bits": 293601280.0, 
             "packet_rtts": [], 
             "start_time_sec": 0.5, 
             "source": null, 
@@ -120,7 +120,7 @@
                 "py/set": []
             }, 
             "dest": null, 
-            "data_size_bits": 125829120, 
+            "data_size_bits": 125829120.0, 
             "packet_rtts": [], 
             "start_time_sec": 10, 
             "source": null, 
@@ -143,7 +143,7 @@
                 "py/set": []
             }, 
             "dest": null, 
-            "data_size_bits": 251658240, 
+            "data_size_bits": 251658240.0, 
             "packet_rtts": [], 
             "start_time_sec": 20, 
             "source": null, 
@@ -163,13 +163,14 @@
             "static_delay_sec": 0.01, 
             "busy": false, 
             "end_1_device": null, 
+            "name": "LS1", 
             "end_2_device": null, 
             "end_1_addr": "R1", 
             "end_2_addr": "R2", 
-            "capacity_bps": 10485760, 
+            "capacity_bps": 10240000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 1048576, 
+                "max_buffer_size_bits": 1048576.0, 
                 "queue": {
                     "py/object": "Queue.Queue"
                 }, 
@@ -181,13 +182,14 @@
             "static_delay_sec": 0.01, 
             "busy": false, 
             "end_1_device": null, 
+            "name": "LS2", 
             "end_2_device": null, 
             "end_1_addr": "R2", 
             "end_2_addr": "R3", 
-            "capacity_bps": 10485760, 
+            "capacity_bps": 10240000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 1048576, 
+                "max_buffer_size_bits": 1048576.0, 
                 "queue": {
                     "py/id": 21
                 }, 
@@ -199,13 +201,14 @@
             "static_delay_sec": 0.01, 
             "busy": false, 
             "end_1_device": null, 
+            "name": "LS3", 
             "end_2_device": null, 
             "end_1_addr": "R3", 
             "end_2_addr": "R4", 
-            "capacity_bps": 10485760, 
+            "capacity_bps": 10240000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 1048576, 
+                "max_buffer_size_bits": 1048576.0, 
                 "queue": {
                     "py/id": 21
                 }, 
@@ -217,13 +220,14 @@
             "static_delay_sec": 0.01, 
             "busy": false, 
             "end_1_device": null, 
+            "name": "LH1", 
             "end_2_device": null, 
             "end_1_addr": "S1", 
             "end_2_addr": "R1", 
-            "capacity_bps": 13107200.0, 
+            "capacity_bps": 12800000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 1048576, 
+                "max_buffer_size_bits": 1048576.0, 
                 "queue": {
                     "py/id": 21
                 }, 
@@ -235,13 +239,14 @@
             "static_delay_sec": 0.01, 
             "busy": false, 
             "end_1_device": null, 
+            "name": "LH2", 
             "end_2_device": null, 
             "end_1_addr": "T1", 
             "end_2_addr": "R4", 
-            "capacity_bps": 13107200.0, 
+            "capacity_bps": 12800000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 1048576, 
+                "max_buffer_size_bits": 1048576.0, 
                 "queue": {
                     "py/id": 21
                 }, 
@@ -253,13 +258,14 @@
             "static_delay_sec": 0.01, 
             "busy": false, 
             "end_1_device": null, 
+            "name": "LH3", 
             "end_2_device": null, 
             "end_1_addr": "S2", 
             "end_2_addr": "R1", 
-            "capacity_bps": 13107200.0, 
+            "capacity_bps": 12800000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 1048576, 
+                "max_buffer_size_bits": 1048576.0, 
                 "queue": {
                     "py/id": 21
                 }, 
@@ -271,13 +277,14 @@
             "static_delay_sec": 0.01, 
             "busy": false, 
             "end_1_device": null, 
+            "name": "LH4", 
             "end_2_device": null, 
             "end_1_addr": "T2", 
             "end_2_addr": "R2", 
-            "capacity_bps": 13107200.0, 
+            "capacity_bps": 12800000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 1048576, 
+                "max_buffer_size_bits": 1048576.0, 
                 "queue": {
                     "py/id": 21
                 }, 
@@ -289,13 +296,14 @@
             "static_delay_sec": 0.01, 
             "busy": false, 
             "end_1_device": null, 
+            "name": "LH5", 
             "end_2_device": null, 
             "end_1_addr": "S3", 
             "end_2_addr": "R3", 
-            "capacity_bps": 13107200.0, 
+            "capacity_bps": 12800000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 1048576, 
+                "max_buffer_size_bits": 1048576.0, 
                 "queue": {
                     "py/id": 21
                 }, 
@@ -307,13 +315,14 @@
             "static_delay_sec": 0.01, 
             "busy": false, 
             "end_1_device": null, 
+            "name": "LH6", 
             "end_2_device": null, 
             "end_1_addr": "T3", 
             "end_2_addr": "R4", 
-            "capacity_bps": 13107200.0, 
+            "capacity_bps": 12800000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 1048576, 
+                "max_buffer_size_bits": 1048576.0, 
                 "queue": {
                     "py/id": 21
                 }, 
