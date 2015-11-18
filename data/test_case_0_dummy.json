@@ -28,7 +28,7 @@
                 "py/set": []
             }, 
             "dest": null, 
-            "data_size_bits": 167772160.0, 
+            "data_size_bits": 160000000.0, 
             "packet_rtts": [], 
             "start_time_sec": 1, 
             "source": null, 
@@ -52,10 +52,10 @@
             "end_2_device": null, 
             "end_1_addr": "H1", 
             "end_2_addr": "H2", 
-            "capacity_bps": 10240000.0, 
+            "capacity_bps": 10000000.0, 
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
-                "max_buffer_size_bits": 524288.0, 
+                "max_buffer_size_bits": 512000.0, 
                 "queue": {
                     "py/object": "Queue.Queue"
                 }, 
