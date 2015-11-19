@@ -102,10 +102,11 @@ class Link(object):
     specified, but not the Devices themselves (since those are references).
     """
 
-    def __init__(self, end_1_addr=None, end_2_addr=None, end_1_device=None,
+    def __init__(self, name=None, end_1_addr=None, end_2_addr=None, end_1_device=None,
             end_2_device=None, link_buffer=LinkBuffer(), static_delay_sec=None,
             capacity_bps=None, busy = False):
         """
+        :ivar str name: name of a Link
         :ivar string end_1_addr: address of Device on one end (e.g. "H1").
         :ivar string end_2_addr: address of Device on other end (e.g. "H2").
         :ivar Device end_1_device: actual Device on one end.
@@ -116,6 +117,7 @@ class Link(object):
         :ivar boolean busy: whether the Link is being used for transmission
         at the moment.
         """
+        self.name = name
         self.end_1_addr = end_1_addr
         self.end_2_addr = end_2_addr
         self.end_1_device = end_1_device

@@ -25,11 +25,10 @@ class Host(Device):
     packet IDs that have been received for that Flow. This is used to carry
     out "selective repeat" instead of "go-back-N".
     """
-    def __init__(self, address=None, flows={}, flow_packets_received={},
-                 link=None):
+    def __init__(self, address, flows=None, link=None):
         Device.__init__(self, address)
         self.flows = flows
-        self.flow_packets_received = flow_packets_received
+        self.flow_packets_received = dict()
         self.link = link
 
 

@@ -192,7 +192,8 @@ class NetworkTopology(object):
 
     def __get_device_with_addr(self, device_addr):
         devices = copy.copy(self.hosts)
-        devices.append(self.routers)
+        if self.routers is not None:
+            devices.extend(self.routers)
         for device in devices:
             if device.address == device_addr:
                 return device
@@ -263,6 +264,9 @@ class NetworkTopology(object):
 
             # Configure Flows that start at this Host.
             connected_flows = self.__get_flows_with_source_addr(host.address)
+            # initialize it if still Nonetype
+            if host.flows is None:
+                host.flows = dict()
             for flow in connected_flows:
                 host.flows[flow.flow_id] = flow
 
