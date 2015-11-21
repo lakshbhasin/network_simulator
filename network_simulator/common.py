@@ -15,7 +15,7 @@ ROUTER_PACKET_SIZE_BITS = 512
 the new routing table is considered stabilized and ready to use. This
 estimate is somewhat conservative (for Test Case 1 TCP Reno, the router
 stabilization only takes around 0.02 s)."""
-ROUTING_TABLE_STAB_TIME_SEC = 0.10
+ROUTING_TABLE_STAB_TIME_SEC = 0.15
 
 """Time (sec) between routing table updates. Must be long enough to ensure
 convergence, but short enough to ensure routing is optimal."""

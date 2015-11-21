@@ -232,17 +232,21 @@ if __name__ == "__main__":
                               routers=routers)
     network.write_to_json("data/test_case_2_reno.json")
 
-    # FAST
+    # FAST. Parameters are tweaked to match HW Problem 6.8 (although that
+    # problem has different link capacities, etc)
     flows = list()
     f1 = FlowFast(flow_id="F1", source_addr="S1", dest_addr="T1",
                   data_size_bits=35.0 * MEGABYTE,
-                  start_time_sec=0.5)
+                  start_time_sec=0.5,
+                  alpha=50.0, gamma=0.5)
     f2 = FlowFast(flow_id="F2", source_addr="S2", dest_addr="T2",
                   data_size_bits=15.0 * MEGABYTE,
-                  start_time_sec=10)
+                  start_time_sec=10,
+                  alpha=50.0, gamma=0.5)
     f3 = FlowFast(flow_id="F3", source_addr="S3", dest_addr="T3",
                   data_size_bits=30.0 * MEGABYTE,
-                  start_time_sec=20)
+                  start_time_sec=20,
+                  alpha=50.0, gamma=0.5)
     flows.append(f1)
     flows.append(f2)
     flows.append(f3)

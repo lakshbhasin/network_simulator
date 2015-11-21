@@ -578,9 +578,9 @@ class FlowFast(Flow):
                                               self.alpha))
         self.window_size_packets = new_window_size
 
-        logger.debug("Flow %s updated window size from %f pkts to %f pkts "
-                     "during periodic TCP FAST update.", self.flow_id,
-                     old_window_size, new_window_size)
+        # logger.debug("Flow %s updated window size from %f pkts to %f pkts "
+        #              "during periodic TCP FAST update.", self.flow_id,
+        #              old_window_size, new_window_size)
 
 
 class InitiateFlowEvent(Event):
@@ -649,6 +649,10 @@ class PeriodicFlowInterrupt(Event):
     internal parameters. Currently, this is only used with TCP FAST. The
     Flows that can handle periodic interrupts should implement a
     handle_periodic_interrupt() function.
+
+    This Event will always call itself again and again once it is done
+    running; it is up to the MainEventLoop to stop the interrupts when the
+    Flow is complete.
     """
 
     def __init__(self, flow, time_period_sec):
@@ -950,7 +954,8 @@ class FlowCompleteEvent(Event):
         :param Statistics statistics: the Statistics to update.
         """
         # Do nothing.
-        pass
+        logger.info("Flow %s completed at time %f s.", self.flow.flow_id,
+                    main_event_loop.global_clock_sec)
 
     def schedule_new_events(self, main_event_loop):
         """

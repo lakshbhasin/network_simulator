@@ -6,7 +6,7 @@ from Queue import PriorityQueue
 import logging
 
 from statistics import Statistics
-from flow import InitiateFlowEvent, FlowCompleteEvent
+from flow import FlowCompleteEvent, InitiateFlowEvent, PeriodicFlowInterrupt
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +48,13 @@ class MainEventLoop(object):
         if self.events.empty():
             raise ValueError("Tried to run an empty event loop.")
 
-        # Count the number of InitiateFlowEvents to track how many Flows need
-        # to complete before we exit.
-        num_flows_left = 0
+        # Track the IDs of Flows that are not yet complete.
+        incomplete_flow_ids = list()
         for _, this_event in self.events.queue:
             if isinstance(this_event, InitiateFlowEvent):
-                num_flows_left += 1
+                incomplete_flow_ids.append(this_event.flow.flow_id)
 
-        if num_flows_left == 0:
+        if len(incomplete_flow_ids) == 0:
             raise ValueError("No Flows were scheduled to run.")
 
         # Variables for printing periodic updates in Event loop
@@ -65,7 +64,7 @@ class MainEventLoop(object):
         # Keep picking next Event by time from the PriorityQueue, run it,
         # and schedule new Events, until the total number of flows has been
         # reached.
-        while num_flows_left > 0:
+        while len(incomplete_flow_ids) > 0:
             next_event_start_time, next_event = self.events.get_nowait()
 
             # Ensure not travelling backwards in time.
@@ -76,21 +75,28 @@ class MainEventLoop(object):
 
             self.global_clock_sec = next_event_start_time
 
-            try:
-                next_event.run(self, self.statistics)
-                next_event.schedule_new_events(self)
-            except:
-                # TODO(team): Output Statistics collected so far.
-                logger.warning("Unexpected error. Outputting Statistics...")
-                raise
+            # Do not handle periodic interrupts for Flows that are done.
+            if isinstance(next_event, PeriodicFlowInterrupt) \
+                    and next_event.flow.flow_id not in incomplete_flow_ids:
+                logger.info("Stopped handling PeriodicFlowInterrupts for "
+                            "completed Flow %s", next_event.flow.flow_id)
+            else:
+                # Run Event and schedule new Events as usual.
+                try:
+                    next_event.run(self, self.statistics)
+                    next_event.schedule_new_events(self)
+                except:
+                    # TODO(team): Output Statistics collected so far.
+                    logger.warning("Unexpected error. Outputting Statistics...")
+                    raise
 
             if isinstance(next_event, FlowCompleteEvent):
-                num_flows_left -= 1
+                incomplete_flow_ids.remove(next_event.flow.flow_id)
 
             if self.global_clock_sec - prev_print_clock_sec > \
                     print_threshold_sec:
                 logger.info("Finished processing Events through %f sec",
-                             self.global_clock_sec)
+                            self.global_clock_sec)
                 prev_print_clock_sec = self.global_clock_sec
 
         logger.info("Finished running main Event loop.")
