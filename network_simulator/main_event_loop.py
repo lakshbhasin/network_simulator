@@ -58,6 +58,10 @@ class MainEventLoop(object):
         if num_flows_left == 0:
             raise ValueError("No Flows were scheduled to run.")
 
+        # Variables for printing periodic updates in Event loop
+        prev_print_clock_sec = 0.0
+        print_threshold_sec = 0.5
+
         # Keep picking next Event by time from the PriorityQueue, run it,
         # and schedule new Events, until either the Event queue is empty or
         # the total number of flows has been reached.
@@ -82,6 +86,12 @@ class MainEventLoop(object):
 
             if isinstance(next_event, FlowCompleteEvent):
                 num_flows_left -= 1
+
+            if self.global_clock_sec - prev_print_clock_sec > \
+                    print_threshold_sec:
+                logger.debug("Finished processing Events through %f sec",
+                             self.global_clock_sec)
+                prev_print_clock_sec = self.global_clock_sec
 
         logger.info("Finished running main Event loop.")
 

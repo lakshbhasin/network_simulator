@@ -147,14 +147,17 @@ class Flow(object):
     def record_received_timeout(self, packet_id):
         """
         Records that a timeout was received for the given Packet, and returns
-        the old number of pending timeouts.
+        the old number of pending timeouts. If no timeouts were pending,
+        0 is returned.
         :param int packet_id: ID of Packet received.
         :return: The old number of pending timeouts (int), before this call.
         """
-        assert packet_id in self.num_timeouts_pending
-        old_pending_timeouts = self.num_timeouts_pending[packet_id]
-        self.num_timeouts_pending[packet_id] -= 1
-        return old_pending_timeouts
+        if packet_id not in self.num_timeouts_pending:
+            return 0
+        else:
+            old_pending_timeouts = self.num_timeouts_pending[packet_id]
+            self.num_timeouts_pending[packet_id] -= 1
+            return old_pending_timeouts
 
     @abstractmethod
     def handle_packet_loss(self, packet_id, loss_type, main_event_loop):
@@ -820,7 +823,8 @@ class FlowTimeoutPacketEvent(Event):
         """
         # If the particular packet is currently not in transit (i.e. has
         # returned and been ACK'd), then we don't need to do anything here.
-        if self.packet.packet_id not in self.flow.packets_in_transit:
+        if self.packet.packet_id not in self.flow.packets_in_transit \
+                or self.old_pending_timeouts == 0:
             return
 
         # If there *was* > 1 pending timeout *before* this timeout occurred,

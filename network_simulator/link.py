@@ -61,18 +61,19 @@ class LinkBuffer(object):
                 self.remaining_size_bits() > packet.size_bits:
             self.curr_buffer_size_bits += packet.size_bits
             self.queue.put(LinkBufferElement(packet, dest_dev,
-                    global_clock_sec))
+                                             global_clock_sec))
             return True
-
         else:
             return False # failed to push
 
     def pop(self):
         """
-        pops off top LinkBufferElement and returns it
+        Pops off top LinkBufferElement and updates metadata
         :return: top LinkBufferElement
         """
-        return self.queue.get()
+        buff_elem = self.queue.get()
+        self.curr_buffer_size_bits -= buff_elem.packet.size_bits
+        return buff_elem
 
 
 class LinkBufferElement(object):
@@ -184,7 +185,7 @@ class LinkSendEvent(Event):
     Event representing a packet leaving Link's buffer
     """
 
-    def __init__(self, link):
+    def __init__(self, link, buffer_elem):
         """
         :ivar link: link that must send its next packet
         :ivar buffer_elem: temporary variable containing LinkBufferElement to
@@ -192,7 +193,7 @@ class LinkSendEvent(Event):
         """
         Event.__init__(self)
         self.link = link
-        self.buffer_elem = None
+        self.buffer_elem = buffer_elem
 
     def run(self, main_event_loop, statistics):
         """
@@ -211,9 +212,9 @@ class LinkSendEvent(Event):
 
         # update statistics only if not RouterPacket
         if not isinstance(self.buffer_elem.packet, RouterPacket):
-            statistics.link_packet_transmitted(self.link,
-                    self.buffer_elem.packet,
-                    main_event_loop.global_clock_sec)
+            statistics.link_packet_transmitted(
+                self.link,self.buffer_elem.packet,
+                main_event_loop.global_clock_sec)
 
     def schedule_new_events(self, main_event_loop):
         """
@@ -246,8 +247,8 @@ class LinkSendEvent(Event):
         else:
             # queue new event with just transmission delay
             assert self.link.busy == True
-            main_event_loop.schedule_event_with_delay(LinkSendEvent(self.link),
-                                                      transmission_delay)
+            main_event_loop.schedule_event_with_delay(
+                LinkSendEvent(self.link, self.buffer_elem), transmission_delay)
 
 
 class DeviceToLinkEvent(Event):
@@ -295,7 +296,10 @@ class DeviceToLinkEvent(Event):
         # Only schedule new event if link not busy. Note that dropped packet
         # will be no-op under this, since link would have to be full and
         # definitely be busy if a packet were dropped.
-        if not self.link.busy: 
+        if not self.link.busy:
+            buffer_elem = LinkBufferElement(
+                packet=self.packet, dest_dev=self.dest_dev,
+                entry_time=main_event_loop.global_clock_sec)
             main_event_loop.schedule_event_with_delay(
-                LinkSendEvent(self.link), 0)
+                LinkSendEvent(self.link, buffer_elem), 0)
             self.link.busy = True
