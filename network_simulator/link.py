@@ -4,7 +4,8 @@ class, and various Link-related Events.
 """
 
 import logging
-from Queue import Queue
+
+import numpy as np
 
 from event import Event
 from router import Router, RouterReceivedPacketEvent
@@ -18,19 +19,30 @@ class LinkBuffer(object):
     Representation of a Link's FIFO buffer.
     """
 
+    """
+    The maximum number of Packets to average over in computing the queuing
+    delay.
+    """
+    NUM_ELEMS_AVE_Q_DEL = 30
+
     # TODO(team): Parameters related to link congestion, so we can have dynamic
     # routing table updates.
     # TODO(yubo): packet_exemption_times deque
 
-    def __init__(self, max_buffer_size_bits=None, queue=Queue()):
+    def __init__(self, max_buffer_size_bits=None, queue=None):
         """
         :ivar int max_buffer_size_bits: maximum buffer size in bits.
-        :ivar Queue queue: a FIFO queue of LinkBufferElements
+        :ivar Queue queue: a FIFO queue of LinkBufferElements. This is
+        initialized in network_topology.py.
         :ivar int curr_buffer_size_bits: current buffer size in bits
+        :ivar deque queuing_delays: a deque of floats representing how long the
+        last NUM_ELEMS_AVE_Q_DEL elements were in the buffer. This is
+        initialized in network_topology.py.
         """
         self.max_buffer_size_bits = max_buffer_size_bits
         self.queue = queue
         self.curr_buffer_size_bits = 0
+        self.queuing_delays = None
 
     def __repr__(self):
         return str(self.__dict__)
@@ -54,6 +66,7 @@ class LinkBuffer(object):
 
         :param Packet packet: Packet to push
         :param Device dest_dev: destination Device of packet
+        :param: global_clock_sec: the current time (in sec)
         :return: True if pushed, False if not
         """
         # If we have a RouterPacket or if there is sufficient capacity, push
@@ -66,14 +79,37 @@ class LinkBuffer(object):
         else:
             return False # failed to push
 
-    def pop(self):
+    def pop(self, global_clock_sec):
         """
-        Pops off top LinkBufferElement and updates metadata
+        Pops off top LinkBufferElement and updates metadata. This includes
+        updating the latest queuing delay.
+        :param: global_clock_sec: the current time (in sec)
         :return: top LinkBufferElement
         """
         buff_elem = self.queue.get()
         self.curr_buffer_size_bits -= buff_elem.packet.size_bits
+
+        # Add this queuing delay to the left of the deque, and remove any old
+        # ones from the right.
+        this_q_del = global_clock_sec - buff_elem.entry_time
+        assert this_q_del >= 0.0
+        self.queuing_delays.appendleft(this_q_del)
+        while len(self.queuing_delays) > LinkBuffer.NUM_ELEMS_AVE_Q_DEL:
+            self.queuing_delays.pop()
+
         return buff_elem
+
+    def get_average_q_del_sec(self):
+        """
+        Computes the average queuing delay, using the most recent
+        NUM_ELEMS_AVE_Q_DEL Packets' delays.
+        """
+        # Do not compute an average if fewer than NUM_ELEMS_AVE_Q_DEL Packets
+        # have queued at this Link.
+        if len(self.queuing_delays) < LinkBuffer.NUM_ELEMS_AVE_Q_DEL:
+            return 0.0
+
+        return np.mean(self.queuing_delays)
 
 
 class LinkBufferElement(object):
@@ -140,19 +176,19 @@ class Link(object):
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and \
-               self.end_1_addr == other.end_1_addr and \
-               self.end_2_addr == other.end_2_addr
+               self.name == other.name
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def get_link_cost(self):
         """
-        Returns link cost. For now, just returns static propagation delay.
+        Returns link cost. This is the sum of the propagation delay and the
+        average queuing delay over the last few packets. Transmission delay
+        is ignored.
         :return: float of link delay time in seconds
         """
-        # TODO(yubo) consider average wait time for last N packets
-        return self.static_delay_sec
+        return self.static_delay_sec + self.link_buffer.get_average_q_del_sec()
 
     def get_other_end(self, one_end):
         """
@@ -165,8 +201,8 @@ class Link(object):
         elif self.end_2_device == one_end:
             return self.end_1_device
         else:
-            raise ValueError("Device " + str(one_end) + " was not one of the "
-                             "ends in Link " + str(self))
+            raise ValueError("Device " + one_end.address + " was not one of "
+                             "the ends in Link " + str(self))
 
     def push(self, packet, dest_dev, global_clock_sec):
         """
@@ -203,14 +239,14 @@ class LinkSendEvent(Event):
         :param MainEventLoop main_event_loop: event loop for global timing
         :param Statistics statistics: the Statistics to update
         """
-
         # sanity check
         if self.link.link_buffer.get_num_packets() == 0:
             logger.warning("LinkSendEvent while Link empty!")
             return
 
         # now pop
-        self.buffer_elem = self.link.link_buffer.pop()
+        self.buffer_elem = self.link.link_buffer.pop(
+            main_event_loop.global_clock_sec)
 
         # update statistics only if not RouterPacket
         if not isinstance(self.buffer_elem.packet, RouterPacket):
@@ -235,6 +271,8 @@ class LinkSendEvent(Event):
                     RouterReceivedPacketEvent(router=self.buffer_elem.dest_dev,
                                               packet=self.buffer_elem.packet),
                     propagation_delay + transmission_delay)
+            logger.debug("Link used at time %f: %s",
+                         main_event_loop.global_clock_sec, self.link.name)
         else:
             from host import Host, HostReceivedPacketEvent
             assert isinstance(self.buffer_elem.dest_dev, Host)

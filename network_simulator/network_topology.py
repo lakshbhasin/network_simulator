@@ -2,9 +2,11 @@
 Module for NetworkTopology class.
 """
 
+from collections import deque
 import copy
 import json
 import logging
+from Queue import Queue
 
 import jsonpickle
 
@@ -157,9 +159,9 @@ class NetworkTopology(object):
             if link.end_1_device is not None or link.end_2_device is not None:
                 raise ValueError("Ends of Link " + str(link) + " had Devices "
                                  "set")
-            if link.link_buffer.queue.qsize() != 0:
+            if link.link_buffer.queue is not None:
                 raise ValueError("Link buffer " + str(link.link_buffer) + " of "
-                                 "Link " + str(link) + "had a non-empty queue")
+                                 "Link " + str(link) + "had a non-None Queue")
 
             this_link_ends = frozenset({link.end_1_addr, link.end_2_addr})
             if this_link_ends in link_ends:
@@ -250,6 +252,13 @@ class NetworkTopology(object):
         This is also where the Router and Host get their link/links attributes
         set.
         """
+        # Set up un-initialized Link attributes
+        for link in self.links:
+            link.end_1_device = self.__get_device_with_addr(link.end_1_addr)
+            link.end_2_device = self.__get_device_with_addr(link.end_2_addr)
+            link.link_buffer.queue = Queue()
+            link.link_buffer.queuing_delays = deque()
+
         # Set up un-initialized Host attributes
         for host in self.hosts:
             # Get Link connected to this Host.
@@ -270,15 +279,12 @@ class NetworkTopology(object):
             for flow in connected_flows:
                 host.flows[flow.flow_id] = flow
 
-        # Set up un-initialized Router attributes
+        # Set up un-initialized Router attributes (links and internal
+        # neighbor metadata)
         if self.routers is not None:
             for router in self.routers:
                 router.links = self.__get_links_with_end_addr(router.address)
-
-        # Set up un-initialized Link attributes
-        for link in self.links:
-            link.end_1_device = self.__get_device_with_addr(link.end_1_addr)
-            link.end_2_device = self.__get_device_with_addr(link.end_2_addr)
+                router.setup_neighbors()
 
         # Set up un-initialized Flow attributes
         for flow in self.flows:

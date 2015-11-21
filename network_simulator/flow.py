@@ -395,8 +395,8 @@ class FlowReno(Flow):
         super(FlowReno, self).handle_packet_success(packet, statistics,
                                                     curr_time)
 
-        # logger.debug("ACK for Packet %d received. Initial flow state: %d",
-        #              packet.packet_id, self.flow_state)
+        logger.debug("ACK for Packet %d received. Initial flow state: %d",
+                     packet.packet_id, self.flow_state)
 
         if packet.packet_id in self.packet_id_to_ack_gaps:
             del self.packet_id_to_ack_gaps[packet.packet_id]
@@ -407,9 +407,9 @@ class FlowReno(Flow):
         if not packet.loss_occurred:
             self.update_window_size_and_state()
 
-        # logger.debug("Old window size: %f. New window size: %f.",
-        #              old_window_size, self.window_size_packets)
-        # logger.debug("New flow state: %d.", self.flow_state)
+        logger.debug("Old window size: %f. New window size: %f.",
+                     old_window_size, self.window_size_packets)
+        logger.debug("New flow state: %d.", self.flow_state)
 
     def handle_packet_loss(self, packet_id, loss_type, main_event_loop):
         """

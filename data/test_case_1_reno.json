@@ -3,41 +3,49 @@
     "routers": [
         {
             "py/object": "network_simulator.router.Router", 
-            "new_routing_table": {}, 
+            "neighbors": [], 
             "last_table_update_timestamp": 0.0, 
             "links": null, 
             "self_to_host_dists": {}, 
+            "new_routing_table": {}, 
             "stable_routing_table": null, 
+            "self_to_neighb_dists": {}, 
             "address": "R1", 
             "neighb_to_host_dists": {}
         }, 
         {
             "py/object": "network_simulator.router.Router", 
-            "new_routing_table": {}, 
+            "neighbors": [], 
             "last_table_update_timestamp": 0.0, 
             "links": null, 
             "self_to_host_dists": {}, 
+            "new_routing_table": {}, 
             "stable_routing_table": null, 
+            "self_to_neighb_dists": {}, 
             "address": "R2", 
             "neighb_to_host_dists": {}
         }, 
         {
             "py/object": "network_simulator.router.Router", 
-            "new_routing_table": {}, 
+            "neighbors": [], 
             "last_table_update_timestamp": 0.0, 
             "links": null, 
             "self_to_host_dists": {}, 
+            "new_routing_table": {}, 
             "stable_routing_table": null, 
+            "self_to_neighb_dists": {}, 
             "address": "R3", 
             "neighb_to_host_dists": {}
         }, 
         {
             "py/object": "network_simulator.router.Router", 
-            "new_routing_table": {}, 
+            "neighbors": [], 
             "last_table_update_timestamp": 0.0, 
             "links": null, 
             "self_to_host_dists": {}, 
+            "new_routing_table": {}, 
             "stable_routing_table": null, 
+            "self_to_neighb_dists": {}, 
             "address": "R4", 
             "neighb_to_host_dists": {}
         }
@@ -97,9 +105,8 @@
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 512000.0, 
-                "queue": {
-                    "py/object": "Queue.Queue"
-                }, 
+                "queue": null, 
+                "queuing_delays": null, 
                 "curr_buffer_size_bits": 0
             }
         }, 
@@ -116,9 +123,8 @@
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 512000.0, 
-                "queue": {
-                    "py/id": 10
-                }, 
+                "queue": null, 
+                "queuing_delays": null, 
                 "curr_buffer_size_bits": 0
             }
         }, 
@@ -135,9 +141,8 @@
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 512000.0, 
-                "queue": {
-                    "py/id": 10
-                }, 
+                "queue": null, 
+                "queuing_delays": null, 
                 "curr_buffer_size_bits": 0
             }
         }, 
@@ -154,9 +159,8 @@
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 512000.0, 
-                "queue": {
-                    "py/id": 10
-                }, 
+                "queue": null, 
+                "queuing_delays": null, 
                 "curr_buffer_size_bits": 0
             }
         }, 
@@ -173,9 +177,8 @@
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 512000.0, 
-                "queue": {
-                    "py/id": 10
-                }, 
+                "queue": null, 
+                "queuing_delays": null, 
                 "curr_buffer_size_bits": 0
             }
         }, 
@@ -192,9 +195,8 @@
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 512000.0, 
-                "queue": {
-                    "py/id": 10
-                }, 
+                "queue": null, 
+                "queuing_delays": null, 
                 "curr_buffer_size_bits": 0
             }
         }

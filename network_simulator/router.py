@@ -45,20 +45,28 @@ class Router(Device):
         self.self_to_host_dists = dict()
         self.links = links
         self.last_table_update_timestamp = 0.0
+        self.neighbors = []
+        self.self_to_neighb_dists = dict()
 
+    def setup_neighbors(self):
+        """
+        This function is called after the NetworkTopology class has connected
+        Links to this router. This is used to make sure the Router knows its
+        neighbors.
+        """
         # Compute neighbors based on links.
         neighbors = []
-        if self.links is not None:
-            for link in self.links:
-                # Neighbor associated with Link (i.e. Device on the other side).
-                neighbor = link.get_other_end(self)
-                neighbors.append(neighbor)
-            self.neighbors = neighbors
+        assert self.links is not None
+        for link in self.links:
+            # Neighbor associated with Link (i.e. Device on the other side).
+            neighbor = link.get_other_end(self)
+            neighbors.append(neighbor)
+        self.neighbors = neighbors
 
-            # Update self --> neighbor distances based on connected Links,
-            # and calculate initial routing table based on just this data.
-            self.self_to_neighb_dists = dict()
-            self.update_routing_table(update_self_to_neighbor_dists=True)
+        # Update self --> neighbor distances based on connected Links,
+        # and calculate initial routing table based on just this data.
+        self.self_to_neighb_dists = dict()
+        self.update_routing_table(update_self_to_neighbor_dists=True)
 
     def update_self_neighbor_dists(self):
         """
@@ -240,6 +248,8 @@ class Router(Device):
         :param MainEventLoop main_event_loop: Event loop for scheduling
             DeviceToLinkEvents asynchronously.
         """
+        logger.debug("Router %s broadcasting router packets.", self.address)
+
         # Map from RouterHost to *min* distance (in sec) between this Router
         # and that Host. This is just a transformation of self_to_host_dists.
         router_to_host_dists = dict()
@@ -387,7 +397,8 @@ class RouterReceivedPacketEvent(Event):
             # Check if the Router's "self_to_host_dists" changed. Do not update
             # router --> neighbor direct distances on receipt of a RouterPacket,
             # since that will cause constant broadcasting of RouterPackets
-            # (as "self_to_host_dists" keeps changing).
+            # (as "self_to_host_dists" keeps changing based on neighbors'
+            # link costs).
             self.router_to_host_dists_changed = \
                 self.router.update_routing_table(
                     update_self_to_neighbor_dists=False,
@@ -405,6 +416,7 @@ class RouterReceivedPacketEvent(Event):
                 isinstance(self.packet, AckPacket):
             if self.link is not None:
                 destination = self.link.get_other_end(self.router)
+                from link import DeviceToLinkEvent
                 dev_to_link_ev = DeviceToLinkEvent(packet=self.packet,
                                                    link=self.link,
                                                    dest_dev=destination)

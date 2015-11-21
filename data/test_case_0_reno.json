@@ -56,9 +56,8 @@
             "link_buffer": {
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 512000.0, 
-                "queue": {
-                    "py/object": "Queue.Queue"
-                }, 
+                "queue": null, 
+                "queuing_delays": null, 
                 "curr_buffer_size_bits": 0
             }
         }
