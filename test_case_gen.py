@@ -121,11 +121,12 @@ if __name__ == "__main__":
                               routers=routers)
     network.write_to_json("data/test_case_1_reno.json")
 
-    # FAST
+    # FAST. Parameters are tweaked to maximize throughput.
     flows = list()
     f1 = FlowFast(flow_id="F1", source_addr="H1", dest_addr="H2",
                   data_size_bits=20.0 * MEGABYTE,
-                  start_time_sec=0.5)
+                  start_time_sec=0.5,
+                  alpha=30.0, gamma=0.5)
     flows.append(f1)
     network = NetworkTopology(links=links, flows=flows, hosts=hosts,
                               routers=routers)
