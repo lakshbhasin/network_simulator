@@ -40,12 +40,15 @@ class FlowStats(object):
     when an ACK packet was received for this :class:`.Flow`. Time is in
     seconds.
     :ivar list packet_rtts: a list of RTTs (in seconds).
+    :ivar list window_size_times: a list of (timestamp, window_size) with
+    window_size in number of packets.
     """
     def __init__(self, packet_sent_times=[], packet_rec_times=[],
-                 packet_rtts=[]):
+                 packet_rtts=[], window_size_times=[]):
         packet_sent_times = packet_sent_times
         packet_rec_times = packet_rec_times
         packet_rtts = packet_rtts
+        window_size_times = window_size_times
 
 
 
@@ -182,6 +185,16 @@ class Statistics(object):
         # it to calculate RTT.
         sent_time = ack_packet.data_packet_start_time_sec
         stats.packet_rtts.append(curr_time - sent_time)
+
+    def flow_window_size(self, flow, curr_time):
+        """
+        Record a change in window size from a flow.
+
+        :param Flow flow: flow of action.
+        :param float curr_time: simulation time of change.
+        """
+        stats = self.get_flow_stats(flow)
+        stats.window_size_times.append((curr_time, flow.window_size_packets))
 
     def host_packet_sent(self, host, packet):
         """
