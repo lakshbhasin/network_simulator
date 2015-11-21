@@ -4,11 +4,11 @@
 import bisect
 import logging
 
-from device import *
-from event import *
-from flow import *
-from link import *
-from statistics import *
+from device import Device
+from event import Event
+from flow import FlowReceivedAckEvent
+from link import DeviceToLinkEvent
+from packet import AckPacket, DataPacket, RouterPacket
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +63,8 @@ class HostReceivedPacketEvent(Event):
         """
         # add packet to host.flow_packets_received if its a DataPacket
         if isinstance(self.packet, DataPacket):
-
             old_packets_received = self.host.flow_packets_received.get(
-                self.packet.flow_id, default=list())
+                self.packet.flow_id, list())
 
             self.packet_previously_received = elem_in_list(
                 self.packet.packet_id, old_packets_received)

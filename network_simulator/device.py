@@ -1,8 +1,6 @@
 """This module contains all device definitions.
 """
 
-from common import *
-
 
 class Device(object):
     """Representation of a device (Host or Router).

@@ -5,15 +5,15 @@ TCP algorithms), and Flow-related Events.
 
 from abc import ABCMeta, abstractmethod
 import copy
-from Queue import PriorityQueue
+import logging
+from Queue import Queue
 
 import numpy as np
 
 from common import *
-from event import *
-from link import *
-from main_event_loop import *
-from packet import *
+from event import Event
+from link import DeviceToLinkEvent
+from packet import AckPacket, DataPacket
 
 logger = logging.getLogger(__name__)
 

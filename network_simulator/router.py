@@ -1,11 +1,12 @@
 """This module contains Router definition.
 """
 
-from device import *
-from event import *
-from host import *
-from link import *
-from packet import *
+import logging
+
+from common import *
+from device import Device
+from event import Event
+from packet import AckPacket, DataPacket, RouterPacket
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,7 @@ class Router(Device):
         """
         :return: list of neighbors that are Hosts.
         """
+        from host import Host
         neighbor_hosts = []
         for device in self.neighbors:
             if isinstance(device, Host):
@@ -256,6 +258,7 @@ class Router(Device):
                                          main_event_loop.global_clock_sec,
                                          router_to_host_dists=
                                          router_to_host_dists)
+            from link import DeviceToLinkEvent
             dev_to_link_ev = DeviceToLinkEvent(packet=router_packet,
                                                link=link,
                                                dest_dev=destination)

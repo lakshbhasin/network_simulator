@@ -4,7 +4,7 @@ and various Packet-related Events.
 Packet will be an abstract class.
 """
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from common import *
 
 

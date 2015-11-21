@@ -6,11 +6,11 @@ import copy
 import json
 import logging
 
-from host import *
-from common import *
-from router import *
-
 import jsonpickle
+
+from common import *
+from host import Host
+from router import Router
 
 logger = logging.getLogger(__name__)
 

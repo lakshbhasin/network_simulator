@@ -16,8 +16,8 @@ import sys
 
 from network_simulator.main_event_loop import MainEventLoop
 from network_simulator.network_topology import NetworkTopology
-from network_simulator.flow import *
-from network_simulator.router import *
+from network_simulator.flow import InitiateFlowEvent
+from network_simulator.router import InitiateRoutingTableUpdateEvent
 
 if __name__ == "__main__":
     log_choices = ["DEBUG", "INFO", "WARNING"]

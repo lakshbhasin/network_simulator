@@ -5,8 +5,8 @@ Module for the MainEventLoop class.
 from Queue import PriorityQueue
 import logging
 
-from statistics import *
-from flow import *
+from statistics import Statistics
+from flow import InitiateFlowEvent, FlowCompleteEvent
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class MainEventLoop(object):
             self.global_clock_sec = next_event_start_time
 
             try:
-                next_event.run(self.statistics)
+                next_event.run(self, self.statistics)
                 next_event.schedule_new_events(self)
             except:
                 # TODO(team): Output Statistics collected so far.

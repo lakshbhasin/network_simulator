@@ -6,11 +6,9 @@ class, and various Link-related Events.
 import logging
 from Queue import Queue
 
-from common import *
-from event import *
-from host import *
-from packet import *
-from router import *
+from event import Event
+from router import Router, RouterReceivedPacketEvent
+from packet import RouterPacket
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +41,12 @@ class LinkBuffer(object):
         :return: remaining buffer size in bits
         """
         return self.max_buffer_size_bits - self.curr_buffer_size_bits
+
+    def get_num_packets(self):
+        """
+        :return: The number of Packets in the queue
+        """
+        return self.queue.qsize()
 
     def push(self, packet, dest_dev, global_clock_sec):
         """
@@ -198,18 +202,18 @@ class LinkSendEvent(Event):
         """
 
         # sanity check
-        if self.link.queue.empty():
+        if self.link.link_buffer.get_num_packets() == 0:
             logger.warning("LinkSendEvent while Link empty!")
             return
 
         # now pop
-        self.buffer_elem = self.link.pop()
+        self.buffer_elem = self.link.link_buffer.pop()
 
         # update statistics only if not RouterPacket
         if not isinstance(self.buffer_elem.packet, RouterPacket):
             statistics.link_packet_transmitted(self.link,
                     self.buffer_elem.packet,
-                    main_event_loop.global_cloc_sec)
+                    main_event_loop.global_clock_sec)
 
     def schedule_new_events(self, main_event_loop):
         """
@@ -229,6 +233,7 @@ class LinkSendEvent(Event):
                                               packet=self.buffer_elem.packet),
                     propagation_delay + transmission_delay)
         else:
+            from host import Host, HostReceivedPacketEvent
             assert isinstance(self.buffer_elem.dest_dev, Host)
             main_event_loop.schedule_event_with_delay(
                     HostReceivedPacketEvent(host=self.buffer_elem.dest_dev,
@@ -273,8 +278,8 @@ class DeviceToLinkEvent(Event):
         """
         # if successfully pushed
         if self.link.push(self.packet, self.dest_dev,
-                          main_event_loop.global_cloc_sec):
-            statistics.link_buffer_occ_change(self, self.packet,
+                          main_event_loop.global_clock_sec):
+            statistics.link_buffer_occ_change(self.link,
                                               main_event_loop.global_clock_sec)
         else:
             statistics.link_packet_loss(self.link,

@@ -4,11 +4,6 @@ graphing).
 """
 
 
-from host import *
-from link import *
-from flow import *
-
-
 class LinkStats(object):
     """
     Contains information of a link related to per-link buffer occupancy,
@@ -21,12 +16,10 @@ class LinkStats(object):
     :ivar list packet_transmit_times: a list of (timestamp, packet_size)
     corresponding to when a packet was transmitted. packet_size is in bits.
     """
-    def __init__(self, buffer_occupancy=[], packet_loss_times=[],
-                 packet_transmit_times=[]):
-        self.buffer_occupancy = buffer_occupancy
-        self.packet_loss_times = packet_loss_times
-        self.packet_transmit_times = packet_transmit_times
-
+    def __init__(self):
+        self.buffer_occupancy = list()
+        self.packet_loss_times = list()
+        self.packet_transmit_times = list()
 
 
 class FlowStats(object):
@@ -41,12 +34,10 @@ class FlowStats(object):
     seconds.
     :ivar list packet_rtts: a list of RTTs (in seconds).
     """
-    def __init__(self, packet_sent_times=[], packet_rec_times=[],
-                 packet_rtts=[]):
-        packet_sent_times = packet_sent_times
-        packet_rec_times = packet_rec_times
-        packet_rtts = packet_rtts
-
+    def __init__(self):
+        self.packet_sent_times = list()
+        self.packet_rec_times = list()
+        self.packet_rtts = list()
 
 
 class HostStats(object):
@@ -58,10 +49,9 @@ class HostStats(object):
     :ivar list packet_rec_times: a list of (timestamp, packet_size)
     tuples. packet_size is in bits. Time is in seconds.
     """
-    def __init__(self, packet_sent_times=[], packet_rec_times=[]):
-        packet_sent_times = packet_sent_times
-        packet_rec_times = packet_rec_times
-
+    def __init__(self):
+        self.packet_sent_times = list()
+        self.packet_rec_times = list()
 
 
 class Statistics(object):
@@ -76,10 +66,10 @@ class Statistics(object):
     :ivar dict host_stats: a map from host ID to :class:`.HostStats`. host
     ids are strings.
     """
-    def __init__(self, link_stats={}, flow_stats={}, host_stats={}):
-        self.link_stats = link_stats
-        self.flow_stats = flow_stats
-        self.host_stats = host_stats
+    def __init__(self):
+        self.link_stats = dict()
+        self.flow_stats = dict()
+        self.host_stats = dict()
 
     def get_link_stats(self, link):
         """
@@ -134,7 +124,7 @@ class Statistics(object):
         # TODO(sharon): Check with Cody if qsize() is what is want here (count
         # number of all packets). Or do we just want to size of
         # RoutingPackets.
-        buffer_occ_packets = link.link_buffer.qsize()
+        buffer_occ_packets = link.link_buffer.get_num_packets()
         stats.buffer_occupancy.append((curr_time, buffer_occ_packets))
 
     def link_packet_loss(self, link, curr_time):
