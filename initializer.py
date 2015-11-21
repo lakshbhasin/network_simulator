@@ -16,6 +16,8 @@ import sys
 
 from network_simulator.main_event_loop import MainEventLoop
 from network_simulator.network_topology import NetworkTopology
+from network_simulator.flow import *
+from network_simulator.router import *
 
 if __name__ == "__main__":
     log_choices = ["DEBUG", "INFO", "WARNING"]
@@ -65,7 +67,15 @@ if __name__ == "__main__":
 
     # Set up event loop and statistics, and register initial Events
     event_loop = MainEventLoop()
-    # TODO(laksh): Need to register InitiateFlowEvents for each Flow and
-    # InitiateRoutingTableUpdateEvents for each Router.
+
+    # if routers not None, schedule events immediately
+    if topology.routers is not None:
+        for router in topology.routers:
+            event_loop.schedule_event_with_delay(InitiateRoutingTableUpdateEvent(router),0)
+
+    # flows is never None right?...
+    for flow in topology.flows:
+        event_loop.schedule_event_with_delay(InitiateFlowEvent(flow), 
+                                             flow.start_time_sec)
 
     event_loop.run()

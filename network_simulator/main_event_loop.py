@@ -6,6 +6,7 @@ from Queue import PriorityQueue
 import logging
 
 from statistics import *
+from flow import *
 
 logger = logging.getLogger(__name__)
 

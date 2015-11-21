@@ -23,11 +23,21 @@ Dependencies
 ===
 To use the package network_simulator, the following dependencies need to
 be installed.
+- (sudo apt-get install) zlib1g-dev:
+```
+  http://unix.stackexchange.com/questions/164517/nonetype-object-has-no-attribute-decompressobj-while-installing-bootstrap-se
+```
 
 - setuptools:
 ```
 https://pypi.python.org/pypi/setuptools#unix-wget
 ```
+
+- TODO(team): More to come.
+
+** Note that zlib1g-dev needs to be installed prior to Python installation.
+If the order is reversed, the Python structure might need a re-"make install".
+
 
 Usage
 ===
