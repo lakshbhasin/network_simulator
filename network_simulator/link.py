@@ -3,6 +3,7 @@ This module holds the Link class, the LinkBuffer class, the LinkBufferElement
 class, and various Link-related Events.
 """
 
+from collections import deque
 import logging
 
 import numpy as np
@@ -20,14 +21,22 @@ class LinkBuffer(object):
     """
 
     """
-    The maximum number of Packets to average over in computing the queuing
-    delay.
+    The maximum number of Packets to average over in computing the most
+    recent version of the queuing delay.
     """
     NUM_ELEMS_AVE_Q_DEL = 30
 
-    # TODO(team): Parameters related to link congestion, so we can have dynamic
-    # routing table updates.
-    # TODO(yubo): packet_exemption_times deque
+    """
+    The minimum number of queuing delay data points needed before being
+    confident that the average queuing delay is accurate.
+    """
+    MIN_ELEMS_AVE_Q_DEL = 10
+
+    """
+    If any of the data in self.queuing_delays is more than this many seconds
+    old, remove it from the queue (as it is out of date).
+    """
+    MAX_DATA_AGE_SEC = 1.0
 
     def __init__(self, max_buffer_size_bits=None, queue=None):
         """
@@ -35,9 +44,11 @@ class LinkBuffer(object):
         :ivar Queue queue: a FIFO queue of LinkBufferElements. This is
         initialized in network_topology.py.
         :ivar int curr_buffer_size_bits: current buffer size in bits
-        :ivar deque queuing_delays: a deque of floats representing how long the
-        last NUM_ELEMS_AVE_Q_DEL elements were in the buffer. This is
-        initialized in network_topology.py.
+        :ivar deque queuing_delays: a deque of (exit_time, queuing_delay) tuples
+        representing how long the last NUM_ELEMS_AVE_Q_DEL elements were in
+        the buffer -- and when they left the buffer. The exit_time is used to
+        make sure out-of-date data is not being used. This is initialized in
+        network_topology.py.
         """
         self.max_buffer_size_bits = max_buffer_size_bits
         self.queue = queue
@@ -89,27 +100,50 @@ class LinkBuffer(object):
         buff_elem = self.queue.get()
         self.curr_buffer_size_bits -= buff_elem.packet.size_bits
 
-        # Add this queuing delay to the left of the deque, and remove any old
-        # ones from the right.
+        # Add this (exit_time, queuing delay) to the left of the deque, and
+        # remove any old ones from the right.
         this_q_del = global_clock_sec - buff_elem.entry_time
         assert this_q_del >= 0.0
-        self.queuing_delays.appendleft(this_q_del)
+        self.queuing_delays.appendleft((global_clock_sec, this_q_del))
         while len(self.queuing_delays) > LinkBuffer.NUM_ELEMS_AVE_Q_DEL:
             self.queuing_delays.pop()
 
         return buff_elem
 
-    def get_average_q_del_sec(self):
+    def prune_out_of_date_queuing_delays(self, global_clock_sec):
+        """
+        Goes through self.queuing_delays, and removes any data that is more
+        than MAX_DATA_AGE_SEC seconds old.
+        :param float global_clock_sec: current time
+        """
+        # Replacement deque
+        new_queuing_delays = deque()
+        for exit_time, queuing_delay in list(self.queuing_delays):
+            time_since_exit = global_clock_sec - exit_time
+            assert time_since_exit >= 0.0
+
+            if time_since_exit <= LinkBuffer.MAX_DATA_AGE_SEC:
+                new_queuing_delays.append((exit_time, queuing_delay))
+
+        self.queuing_delays = new_queuing_delays
+
+    def get_average_q_del_sec(self, global_clock_sec):
         """
         Computes the average queuing delay, using the most recent
         NUM_ELEMS_AVE_Q_DEL Packets' delays.
+        :param global_clock_sec: The current time, used to make sure we don't
+        use any out-of-date queuing delay data.
         """
-        # Do not compute an average if fewer than NUM_ELEMS_AVE_Q_DEL Packets
-        # have queued at this Link.
-        if len(self.queuing_delays) < LinkBuffer.NUM_ELEMS_AVE_Q_DEL:
+        # Remove any out-of-date data first.
+        self.prune_out_of_date_queuing_delays(global_clock_sec)
+
+        # Do not compute an average if fewer than MIN_ELEMS_AVE_Q_DEL Packets
+        # have "recently" queued at this Link.
+        if len(self.queuing_delays) < LinkBuffer.MIN_ELEMS_AVE_Q_DEL:
             return 0.0
 
-        return np.mean(self.queuing_delays)
+        # Average over the queuing delays (second elements in the tuples).
+        return np.mean([elem[1] for elem in list(self.queuing_delays)])
 
 
 class LinkBufferElement(object):
@@ -181,14 +215,17 @@ class Link(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def get_link_cost(self):
+    def get_link_cost(self, global_clock_sec):
         """
         Returns link cost. This is the sum of the propagation delay and the
         average queuing delay over the last few packets. Transmission delay
         is ignored.
+        :param: float global_clock_sec: The current time. Used to make sure
+        out-of-date data is not used in computing queuing delay.
         :return: float of link delay time in seconds
         """
-        return self.static_delay_sec + self.link_buffer.get_average_q_del_sec()
+        return self.static_delay_sec + \
+               self.link_buffer.get_average_q_del_sec(global_clock_sec)
 
     def get_other_end(self, one_end):
         """
@@ -271,8 +308,6 @@ class LinkSendEvent(Event):
                     RouterReceivedPacketEvent(router=self.buffer_elem.dest_dev,
                                               packet=self.buffer_elem.packet),
                     propagation_delay + transmission_delay)
-            logger.debug("Link used at time %f: %s",
-                         main_event_loop.global_clock_sec, self.link.name)
         else:
             from host import Host, HostReceivedPacketEvent
             assert isinstance(self.buffer_elem.dest_dev, Host)

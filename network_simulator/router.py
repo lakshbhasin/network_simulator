@@ -66,18 +66,22 @@ class Router(Device):
         # Update self --> neighbor distances based on connected Links,
         # and calculate initial routing table based on just this data.
         self.self_to_neighb_dists = dict()
-        self.update_routing_table(update_self_to_neighbor_dists=True)
+        self.update_routing_table(global_clock_sec=0.0,  # assume time = 0.0
+                                  update_self_to_neighbor_dists=True)
 
-    def update_self_neighbor_dists(self):
+    def update_self_neighbor_dists(self, global_clock_sec):
         """
         Updates the distances from this Router to its neighbors, based on
         their link costs.
+        :param: float global_clock_sec: The current time, used to make sure
+        out-of-date queuing delay data is not used.
         """
         new_self_to_neighb_dists = dict()
         for link in self.links:
             # Neighbor associated with Link (i.e. Device on the other side).
             neighbor = link.get_other_end(self)
-            new_self_to_neighb_dists[neighbor] = link.get_link_cost()
+            new_self_to_neighb_dists[neighbor] = \
+                link.get_link_cost(global_clock_sec)
 
         self.self_to_neighb_dists = new_self_to_neighb_dists
 
@@ -160,7 +164,8 @@ class Router(Device):
 
         return link_to_use
 
-    def update_routing_table(self, update_self_to_neighbor_dists,
+    def update_routing_table(self, global_clock_sec,
+                             update_self_to_neighbor_dists,
                              neighb_to_host_update=None):
         """
         A shortest-path (Bellman-Ford) function that recalculates the routing
@@ -174,6 +179,8 @@ class Router(Device):
         self.self_to_host_dists, and self.new_routing_table are updated (if
         necessary).
 
+        :param float global_clock_sec: The current time in seconds (used to
+        make sure that out-of-date queuing delay data is not used).
         :param bool update_self_to_neighbor_dists: whether to update
             self_to_neighb_dists. This should be set to True when a routing
             table update is initiated, but False otherwise (to prevent
@@ -187,7 +194,7 @@ class Router(Device):
         """
         # Update self --> neighbor distances if desired.
         if update_self_to_neighbor_dists:
-            self.update_self_neighbor_dists()
+            self.update_self_neighbor_dists(global_clock_sec)
 
         # Update neighbor --> host distances based on incoming data (if any).
         if neighb_to_host_update is not None:
@@ -331,7 +338,9 @@ class InitiateRoutingTableUpdateEvent(Event):
 
         # Trigger update based only on changed Link costs of the Router's
         # direct neighbors. This will set up self_to_host_dists properly.
-        self.router.update_routing_table(update_self_to_neighbor_dists=True)
+        self.router.update_routing_table(
+            global_clock_sec=main_event_loop.global_clock_sec,
+            update_self_to_neighbor_dists=True)
 
     def schedule_new_events(self, main_event_loop):
         """
@@ -401,6 +410,7 @@ class RouterReceivedPacketEvent(Event):
             # link costs).
             self.router_to_host_dists_changed = \
                 self.router.update_routing_table(
+                    global_clock_sec=main_event_loop.global_clock_sec,
                     update_self_to_neighbor_dists=False,
                     neighb_to_host_update=self.packet.router_to_host_dists)
 

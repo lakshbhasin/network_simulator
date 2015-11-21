@@ -89,7 +89,7 @@ class MainEventLoop(object):
 
             if self.global_clock_sec - prev_print_clock_sec > \
                     print_threshold_sec:
-                logger.debug("Finished processing Events through %f sec",
+                logger.info("Finished processing Events through %f sec",
                              self.global_clock_sec)
                 prev_print_clock_sec = self.global_clock_sec
 
