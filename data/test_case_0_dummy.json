@@ -20,9 +20,7 @@
     "flows": [
         {
             "py/object": "network_simulator.flow.FlowDummy", 
-            "packet_id_buffer": {
-                "py/object": "Queue.Queue"
-            }, 
+            "start_time_sec": 1, 
             "source_addr": "H1", 
             "gap_retrans_packets": {
                 "py/set": []
@@ -30,7 +28,6 @@
             "dest": null, 
             "data_size_bits": 160000000.0, 
             "packet_rtts": [], 
-            "start_time_sec": 1, 
             "source": null, 
             "num_timeouts_pending": {}, 
             "max_packet_id_sent": -1, 

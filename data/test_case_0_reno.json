@@ -20,9 +20,7 @@
     "flows": [
         {
             "py/object": "network_simulator.flow.FlowReno", 
-            "packet_id_buffer": {
-                "py/object": "Queue.Queue"
-            }, 
+            "start_time_sec": 1, 
             "packet_id_to_ack_gaps": {}, 
             "source_addr": "H1", 
             "max_packet_id_sent": -1, 
@@ -41,8 +39,7 @@
             "window_size_packets": 1.0, 
             "packets_in_transit": {
                 "py/set": []
-            }, 
-            "start_time_sec": 1
+            }
         }
     ], 
     "links": [

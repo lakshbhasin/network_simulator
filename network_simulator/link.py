@@ -109,7 +109,7 @@ class Link(object):
 
     def __init__(self, name=None, end_1_addr=None, end_2_addr=None, end_1_device=None,
             end_2_device=None, link_buffer=LinkBuffer(), static_delay_sec=None,
-            capacity_bps=None, busy = False):
+            capacity_bps=None, busy=False):
         """
         :ivar str name: name of a Link
         :ivar string end_1_addr: address of Device on one end (e.g. "H1").
@@ -182,10 +182,12 @@ class Link(object):
 
 class LinkSendEvent(Event):
     """
-    Event representing a packet leaving Link's buffer
+    This Event pops a buffer element and sends it with the appropriate
+    transmission and propagation delays. It then schedules another check on
+    the link status, for one transmission delay later.
     """
 
-    def __init__(self, link, buffer_elem):
+    def __init__(self, link):
         """
         :ivar link: link that must send its next packet
         :ivar buffer_elem: temporary variable containing LinkBufferElement to
@@ -193,7 +195,7 @@ class LinkSendEvent(Event):
         """
         Event.__init__(self)
         self.link = link
-        self.buffer_elem = buffer_elem
+        self.buffer_elem = None
 
     def run(self, main_event_loop, statistics):
         """
@@ -241,14 +243,46 @@ class LinkSendEvent(Event):
                                             packet=self.buffer_elem.packet),
                     propagation_delay + transmission_delay)
 
-        if self.link.link_buffer.queue.empty():
-            # if link_buffer.queue is empty, then link is no longer busy
+        # Check on the buffer after one transmission delay, to see if
+        # there're more Packets in the buffer or if the Link can be made free.
+        assert self.link.busy
+        check_stat_ev = CheckLinkStatusEvent(link=self.link)
+        main_event_loop.schedule_event_with_delay(check_stat_ev,
+                                                  transmission_delay)
+
+
+class CheckLinkStatusEvent(Event):
+    """
+    This Event checks if the Link's buffer is empty or not. If it is not
+    empty, a new LinkSendEvent is scheduled. Otherwise, the Link is marked as
+    not busy.
+    """
+
+    def __init__(self, link):
+        """
+        :ivar link: The Link to check.
+        """
+        super(CheckLinkStatusEvent, self).__init__()
+        self.link = link
+
+    def run(self, main_event_loop, statistics):
+        """
+        Marks Link as non-busy if buffer is still empty.
+        :param MainEventLoop main_event_loop: event loop
+        :param Statistics statistics: statistics
+        """
+        if self.link.link_buffer.get_num_packets() == 0:
             self.link.busy = False
-        else:
-            # queue new event with just transmission delay
-            assert self.link.busy == True
+
+    def schedule_new_events(self, main_event_loop):
+        """
+        If the buffer is not empty, then schedule a LinkSendEvent immediately.
+        :param MainEventLoop main_event_loop: event loop.
+        """
+        if self.link.link_buffer.get_num_packets() != 0:
             main_event_loop.schedule_event_with_delay(
-                LinkSendEvent(self.link, self.buffer_elem), transmission_delay)
+                LinkSendEvent(self.link), 0.0)
+            self.link.busy = True
 
 
 class DeviceToLinkEvent(Event):
@@ -297,9 +331,6 @@ class DeviceToLinkEvent(Event):
         # will be no-op under this, since link would have to be full and
         # definitely be busy if a packet were dropped.
         if not self.link.busy:
-            buffer_elem = LinkBufferElement(
-                packet=self.packet, dest_dev=self.dest_dev,
-                entry_time=main_event_loop.global_clock_sec)
             main_event_loop.schedule_event_with_delay(
-                LinkSendEvent(self.link, buffer_elem), 0)
+                LinkSendEvent(self.link), 0.0)
             self.link.busy = True

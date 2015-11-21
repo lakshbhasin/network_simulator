@@ -48,7 +48,7 @@ TCP_FAST_DEFAULT_ALPHA = 2.0
 """
 TCP FAST time period (sec) for window updates.
 """
-TCP_FAST_UPDATE_PERIOD_SEC = 0.1
+TCP_FAST_UPDATE_PERIOD_SEC = 0.001
 
 """
 Default max number of packets to average in computing RTTs for TCP algorithms.

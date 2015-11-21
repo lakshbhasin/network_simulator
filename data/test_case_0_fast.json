@@ -20,9 +20,7 @@
     "flows": [
         {
             "py/object": "network_simulator.flow.FlowFast", 
-            "packet_id_buffer": {
-                "py/object": "Queue.Queue"
-            }, 
+            "start_time_sec": 1, 
             "source_addr": "H1", 
             "num_packets_ave_for_rtt": 40, 
             "gap_retrans_packets": {
@@ -31,7 +29,6 @@
             "dest": null, 
             "data_size_bits": 160000000.0, 
             "packet_rtts": [], 
-            "start_time_sec": 1, 
             "source": null, 
             "alpha": 2.0, 
             "num_timeouts_pending": {}, 

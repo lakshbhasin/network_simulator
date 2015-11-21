@@ -63,9 +63,9 @@ class MainEventLoop(object):
         print_threshold_sec = 0.5
 
         # Keep picking next Event by time from the PriorityQueue, run it,
-        # and schedule new Events, until either the Event queue is empty or
-        # the total number of flows has been reached.
-        while not self.events.empty() and num_flows_left > 0:
+        # and schedule new Events, until the total number of flows has been
+        # reached.
+        while num_flows_left > 0:
             next_event_start_time, next_event = self.events.get_nowait()
 
             # Ensure not travelling backwards in time.
@@ -94,5 +94,6 @@ class MainEventLoop(object):
                 prev_print_clock_sec = self.global_clock_sec
 
         logger.info("Finished running main Event loop.")
+        logger.info("Time taken: %f s.", self.global_clock_sec)
 
         # TODO(team): Output final Statistics

@@ -89,9 +89,7 @@
     "flows": [
         {
             "py/object": "network_simulator.flow.FlowReno", 
-            "packet_id_buffer": {
-                "py/object": "Queue.Queue"
-            }, 
+            "start_time_sec": 0.5, 
             "packet_id_to_ack_gaps": {}, 
             "source_addr": "S1", 
             "max_packet_id_sent": -1, 
@@ -110,14 +108,11 @@
             "window_size_packets": 1.0, 
             "packets_in_transit": {
                 "py/set": []
-            }, 
-            "start_time_sec": 0.5
+            }
         }, 
         {
             "py/object": "network_simulator.flow.FlowReno", 
-            "packet_id_buffer": {
-                "py/object": "Queue.Queue"
-            }, 
+            "start_time_sec": 10, 
             "packet_id_to_ack_gaps": {}, 
             "source_addr": "S2", 
             "max_packet_id_sent": -1, 
@@ -136,14 +131,11 @@
             "window_size_packets": 1.0, 
             "packets_in_transit": {
                 "py/set": []
-            }, 
-            "start_time_sec": 10
+            }
         }, 
         {
             "py/object": "network_simulator.flow.FlowReno", 
-            "packet_id_buffer": {
-                "py/object": "Queue.Queue"
-            }, 
+            "start_time_sec": 20, 
             "packet_id_to_ack_gaps": {}, 
             "source_addr": "S3", 
             "max_packet_id_sent": -1, 
@@ -162,8 +154,7 @@
             "window_size_packets": 1.0, 
             "packets_in_transit": {
                 "py/set": []
-            }, 
-            "start_time_sec": 20
+            }
         }
     ], 
     "links": [
@@ -200,7 +191,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -219,7 +210,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -238,7 +229,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -257,7 +248,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -276,7 +267,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -295,7 +286,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -314,7 +305,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -333,7 +324,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }

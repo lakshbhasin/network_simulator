@@ -89,9 +89,7 @@
     "flows": [
         {
             "py/object": "network_simulator.flow.FlowDummy", 
-            "packet_id_buffer": {
-                "py/object": "Queue.Queue"
-            }, 
+            "start_time_sec": 0.5, 
             "source_addr": "S1", 
             "gap_retrans_packets": {
                 "py/set": []
@@ -99,7 +97,6 @@
             "dest": null, 
             "data_size_bits": 280000000.0, 
             "packet_rtts": [], 
-            "start_time_sec": 0.5, 
             "source": null, 
             "num_timeouts_pending": {}, 
             "max_packet_id_sent": -1, 
@@ -112,9 +109,7 @@
         }, 
         {
             "py/object": "network_simulator.flow.FlowDummy", 
-            "packet_id_buffer": {
-                "py/object": "Queue.Queue"
-            }, 
+            "start_time_sec": 10, 
             "source_addr": "S2", 
             "gap_retrans_packets": {
                 "py/set": []
@@ -122,7 +117,6 @@
             "dest": null, 
             "data_size_bits": 120000000.0, 
             "packet_rtts": [], 
-            "start_time_sec": 10, 
             "source": null, 
             "num_timeouts_pending": {}, 
             "max_packet_id_sent": -1, 
@@ -135,9 +129,7 @@
         }, 
         {
             "py/object": "network_simulator.flow.FlowDummy", 
-            "packet_id_buffer": {
-                "py/object": "Queue.Queue"
-            }, 
+            "start_time_sec": 20, 
             "source_addr": "S3", 
             "gap_retrans_packets": {
                 "py/set": []
@@ -145,7 +137,6 @@
             "dest": null, 
             "data_size_bits": 240000000.0, 
             "packet_rtts": [], 
-            "start_time_sec": 20, 
             "source": null, 
             "num_timeouts_pending": {}, 
             "max_packet_id_sent": -1, 
@@ -191,7 +182,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -210,7 +201,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -229,7 +220,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -248,7 +239,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -267,7 +258,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -286,7 +277,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -305,7 +296,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
@@ -324,7 +315,7 @@
                 "py/object": "network_simulator.link.LinkBuffer", 
                 "max_buffer_size_bits": 1024000.0, 
                 "queue": {
-                    "py/id": 21
+                    "py/id": 18
                 }, 
                 "curr_buffer_size_bits": 0
             }
