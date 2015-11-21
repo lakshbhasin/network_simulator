@@ -30,7 +30,7 @@
             "data_size_bits": 160000000.0, 
             "packet_rtts": [], 
             "source": null, 
-            "alpha": 2.0, 
+            "alpha": 50.0, 
             "num_timeouts_pending": {}, 
             "max_packet_id_sent": -1, 
             "flow_id": "F1", 

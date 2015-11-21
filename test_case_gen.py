@@ -48,11 +48,12 @@ if __name__ == "__main__":
     network = NetworkTopology(links=links, flows=flows, hosts=hosts)
     network.write_to_json("data/test_case_0_reno.json")
 
-    # generate for FlowFast
+    # generate for FlowFast. Parameters are tweaked to maximize throughput.
     flows = list()
     f1 = FlowFast(flow_id="F1", source_addr="H1", dest_addr="H2",
                   data_size_bits=20.0 * MEGABYTE,
-                  start_time_sec=1)
+                  start_time_sec=1,
+                  alpha=50.0, gamma=0.5)
     flows.append(f1)
     network = NetworkTopology(links=links, flows=flows, hosts=hosts)
     network.write_to_json("data/test_case_0_fast.json")

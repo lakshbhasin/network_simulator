@@ -578,9 +578,9 @@ class FlowFast(Flow):
                                               self.alpha))
         self.window_size_packets = new_window_size
 
-        # logger.debug("Flow %s updated window size from %f pkts to %f pkts "
-        #              "during periodic TCP FAST update.", self.flow_id,
-        #              old_window_size, new_window_size)
+        logger.debug("Flow %s updated window size from %f pkts to %f pkts "
+                     "during periodic TCP FAST update.", self.flow_id,
+                     old_window_size, new_window_size)
 
 
 class InitiateFlowEvent(Event):
