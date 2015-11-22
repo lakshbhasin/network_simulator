@@ -82,19 +82,17 @@ class Grapher(object):
         self.stats = stats
         self.tool = PlotTool()
 
-    def graph_links(self, dct):
+    def graph_links(self):
         """
         Graphs the link stats of each available link.
         """
-        # TODO(sharon): Remove dct as input once we are done with PR.
         # Set up legend storage for link names.
         occpy_legend = []
         loss_legend = []
         trans_legend = []
 
         # Iterate through each link to display each stats.
-        #for link, link_stats in self.stats.link_stats.iteritems():
-        for link, link_stats in dct.iteritems():
+        for link, link_stats in self.stats.link_stats.iteritems():
             # Name of link would be "link_name".
             # Buffer occupancy w.r.t time.
             plt.subplot(431)
@@ -138,11 +136,10 @@ class Grapher(object):
         # Set up grid on graph.
         plt.grid(True)
 
-    def graph_flows(self, dct):
+    def graph_flows(self):
         """
         Graphs the flow stats of each available flow.
         """
-        # TODO(sharon): Remove dct as input once we are done with PR.
         # Set up legend storage for flow names.
         sent_legend = []
         receive_legend = []
@@ -150,8 +147,7 @@ class Grapher(object):
         window_legend = []
 
         # Iterate through each flow to display each stats.
-        #for flow, flow_stats in self.stats.flow_stats.iteritems():
-        for flow, flow_stats in dct.iteritems():
+        for flow, flow_stats in self.stats.flow_stats.iteritems():
             # Name of flow would be "flow_id".
             # Packet sent times.
             plt.subplot(432)
@@ -213,18 +209,16 @@ class Grapher(object):
         # Set up grid on graph.
         plt.grid(True)
 
-    def graph_hosts(self, dct):
+    def graph_hosts(self):
         """
         Graphs the host stats of each available host.
         """
-        # TODO(sharon): Remove dct as input once we are done with PR.
         # Set up legend storage for host names.
         sent_legend = []
         receive_legend = []
 
         # Iterate through each host to display each stats.
-        #for host, host_stats in self.stats.host_stats.iteritems():
-        for host, host_stats in dct.iteritems():
+        for host, host_stats in self.stats.host_stats.iteritems():
             # Name of host would be "host_address".
             # Packet sent times.
             plt.subplot(433)
@@ -258,11 +252,10 @@ class Grapher(object):
         # Set up grid on graph.
         plt.grid(True)
 
-    def graph_network(self, dct1, dct2, dct3):
+    def graph_network(self):
         """
         Graphs the entire network (this includes all links, flows, and hosts.
         """
-        # TODO(sharon): Remove dct as input once we are done with PR.
         # Set up matplotlib window name.
         fig = plt.figure()
         fig.canvas.set_window_title("Network Statistics")
@@ -271,48 +264,11 @@ class Grapher(object):
         fig.set_size_inches(35, 10.5, forward=True)
 
         # Graph all three devices.
-        # TODO(sharon): Remove dct as input once we are done with PR.
-        self.graph_links(dct1)
-        self.graph_flows(dct2)
-        self.graph_hosts(dct3)
+        self.graph_links()
+        self.graph_flows()
+        self.graph_hosts()
 
         # Make spacing between plots.
         plt.tight_layout()
         #plt.axis('equal')
         plt.show()
-
-# Plot examples.
-# TODO(sharon): Remove these once PR is about to merge.
-test = Grapher()
-
-host_stats = HostStats()
-host_stats.packet_sent_times = [(0.03, 2),(0.05, 3), (0.05, 4), (0.07, 5)]
-host_stats.packet_rec_times = [(0.03, 2),(0.05, 3), (0.05, 4), (0.07, 5)]
-host_stats2 = HostStats()
-host_stats2.packet_sent_times = [(0.03, 2),(0.05, 3), (0.05, 4), (0.07, 5)]
-host_stats2.packet_rec_times = [(0.03, 2),(0.05, 3), (0.05, 4), (0.07, 5)]
-dct = {"hostaddr1": host_stats, "hostaddr2": host_stats2}
-
-flow_stats = FlowStats()
-flow_stats.packet_sent_times = [(0.01, 1), (0.02, 3), (0.05, 5), (0.06, 7)]
-flow_stats.packet_rec_times = [(0.01, 1), (0.02, 3), (0.05, 5), (0.06, 7)]
-flow_stats.packet_rtts = [3.5, 3.2, 2.5, 7.0]
-flow_stats.window_size_times = [(0., 1), (1., 3), (2., 5)]
-flow_stats2 = FlowStats()
-flow_stats2.packet_sent_times = [(0.01, 1), (0.02, 3), (0.05, 5), (0.06, 7)]
-flow_stats2.packet_rec_times = [(0.01, 1), (0.02, 3), (0.05, 5), (0.06, 7)]
-flow_stats2.packet_rtts = [3., 2., 1.5, 2.5]
-flow_stats2.window_size_times = [(0.5, 3), (1.5, 2), (2.5, 6)]
-dct2 = {"flow_id1": flow_stats, "flow_id2": flow_stats2}
-
-link_stats = LinkStats()
-link_stats.buffer_occupancy = [(1.0, 4), (2.5, 7), (3.5, 4)]
-link_stats.packet_loss_times = [2, 3, 4, 5, 6]
-link_stats.packet_transmit_times = [(0.5, 2.2), (1.5, 3.2), (2.5, 2)]
-link_stats2 = LinkStats()
-link_stats2.buffer_occupancy = [(0.5, 2), (1.5, 3), (2.5, 2)]
-link_stats2.packet_loss_times = [1.5, 2.5, 3.5, 4.5]
-link_stats2.packet_transmit_times = [(1.5, 3), (2.5, 4), (3.5, 2.2)]
-dct3 = {"linkname_a": link_stats, "linkname_b": link_stats2}
-
-test.graph_network(dct3, dct2, dct)

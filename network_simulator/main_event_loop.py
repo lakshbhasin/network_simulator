@@ -5,6 +5,7 @@ Module for the MainEventLoop class.
 from Queue import PriorityQueue
 import logging
 
+from plot_tool import Grapher
 from statistics import *
 
 logger = logging.getLogger(__name__)
@@ -83,3 +84,8 @@ class MainEventLoop(object):
                 num_flows_left -= 1
 
         logger.info("Finished running main Event loop.")
+
+        # Graph output.
+        grapher = Grapher(self.statistics)
+        grapher.graph_network()
+        logger.info("Finished plotting network statistics.")
