@@ -83,5 +83,3 @@ class MainEventLoop(object):
                 num_flows_left -= 1
 
         logger.info("Finished running main Event loop.")
-
-        # TODO(team): Output final Statistics

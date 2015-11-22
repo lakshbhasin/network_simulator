@@ -10,6 +10,35 @@ class PlotTool(object):
     def __init__(self):
         pass
 
+    def gen_rate_tuple_list(self, tuple_list):
+        """
+        Computes a tuple list of rates based on a (timestamp, data) tuple
+        list.
+
+        :param list tuple_list: list of tuples to be converted.
+        :return: list
+        """
+        curr_count = 0
+        curr_sum = 0
+        curr_time = GRAPH_WINDOW_SIZE
+        output = []
+        for tup_idx in range(len(tuple_list)):
+            timestamp, data = tuple_list[tup_idx]
+            if timestamp > curr_time:
+                if curr_count != 0:
+                    output.append((curr_time, float(curr_sum) / curr_count))
+                    curr_count = 0
+                    curr_sum = 0
+                curr_time += GRAPH_WINDOW_SIZE
+            if timestamp <= curr_time:
+                curr_count += 1
+                curr_sum += data
+        # Append the last elements if they did not reach an end of an
+        # interval.
+        if curr_count != 0:
+            output.append((curr_time, float(curr_sum) / curr_count))
+        return output
+
     def graph_tuple_list(self, tuple_list=[], scatter=False):
         """
         Graphs the content of a tuple list.
@@ -86,8 +115,8 @@ class Grapher(object):
         plt.subplot(431)
         plt.legend(occpy_legend)
         # Set up labels.
-        plt.xlabel("Time (Sec)")
-        plt.ylabel("Buffer Occupancy (Count)")
+        plt.xlabel("Time (sec)")
+        plt.ylabel("Buffer Occupancy (pkts)")
         # Set up grid on graph.
         plt.grid(True)
 
@@ -95,7 +124,7 @@ class Grapher(object):
         plt.subplot(434)
         plt.legend(loss_legend)
         # Set up labels.
-        plt.xlabel("Time (Sec)")
+        plt.xlabel("Time (sec)")
         plt.ylabel("Packet Loss Times")
         # Set up grid on graph.
         plt.grid(True)
@@ -104,7 +133,7 @@ class Grapher(object):
         plt.subplot(437)
         plt.legend(trans_legend)
         # Set up labels.
-        plt.xlabel("Time (Sec)")
+        plt.xlabel("Time (sec)")
         plt.ylabel("Size of Packet Transmitted (Bits)")
         # Set up grid on graph.
         plt.grid(True)
@@ -123,34 +152,36 @@ class Grapher(object):
         # Iterate through each flow to display each stats.
         #for flow, flow_stats in self.stats.flow_stats.iteritems():
         for flow, flow_stats in dct.iteritems():
-            # Name of flow would be "Flow flow_id".
-            flow_name = "Flow " + flow
-
+            # Name of flow would be "flow_id".
             # Packet sent times.
             plt.subplot(432)
-            self.tool.graph_1d_list(host_stats.packet_sent_times)
-            sent_legend.append(flow_name)
+            sent_rate_lst = self.tool.gen_rate_tuple_list(
+                flow_stats.packet_sent_times)
+            self.tool.graph_tuple_list(sent_rate_lst)
+            sent_legend.append(flow)
 
             # Packet receive times.
             plt.subplot(435)
-            self.tool.graph_1d_list(host_stats.packet_rec_times)
-            receive_legend.append(flow_name)
+            rec_rate_lst = self.tool.gen_rate_tuple_list(
+                flow_stats.packet_rec_times)
+            self.tool.graph_tuple_list(rec_rate_lst)
+            receive_legend.append(flow)
 
             # Packet RTT times.
             plt.subplot(438)
             self.tool.graph_1d_list(flow_stats.packet_rtts)
-            rtt_legend.append(flow_name)
+            rtt_legend.append(flow)
 
             # Window size in packets w.r.t time.
             plt.subplot(4,3,11)
             self.tool.graph_tuple_list(flow_stats.window_size_times)
-            window_legend.append(flow_name)
+            window_legend.append(flow)
 
         # Finalize sent graph.
         plt.subplot(432)
         plt.legend(sent_legend)
         # Set up labels.
-        plt.xlabel("Time (Sec)")
+        plt.xlabel("Time (sec)")
         plt.ylabel("Packet Sent Times")
         # Set up grid on graph.
         plt.grid(True)
@@ -159,7 +190,7 @@ class Grapher(object):
         plt.subplot(435)
         plt.legend(receive_legend)
         # Set up labels.
-        plt.xlabel("Time (Sec)")
+        plt.xlabel("Time (sec)")
         plt.ylabel("Packet Received Times")
         # Set up grid on graph.
         plt.grid(True)
@@ -168,8 +199,8 @@ class Grapher(object):
         plt.subplot(438)
         plt.legend(rtt_legend)
         # Set up labels.
-        plt.xlabel("Time (Sec)")
-        plt.ylabel("RTT")
+        plt.xlabel("Time (sec)")
+        plt.ylabel("RTT (sec)")
         # Set up grid on graph.
         plt.grid(True)
 
@@ -177,8 +208,8 @@ class Grapher(object):
         plt.subplot(4,3,11)
         plt.legend(window_legend)
         # Set up labels.
-        plt.xlabel("Time (Sec)")
-        plt.ylabel("Window Size (# of Packets)")
+        plt.xlabel("Time (sec)")
+        plt.ylabel("Window Size (pkts)")
         # Set up grid on graph.
         plt.grid(True)
 
@@ -197,19 +228,23 @@ class Grapher(object):
             # Name of host would be "host_address".
             # Packet sent times.
             plt.subplot(433)
-            self.tool.graph_1d_list(host_stats.packet_sent_times)
+            sent_rate_lst = self.tool.gen_rate_tuple_list(
+                host_stats.packet_sent_times)
+            self.tool.graph_tuple_list(sent_rate_lst)
             sent_legend.append(host)
 
             # Packet receive times.
             plt.subplot(436)
-            self.tool.graph_1d_list(host_stats.packet_rec_times)
+            rec_rate_lst = self.tool.gen_rate_tuple_list(
+                host_stats.packet_rec_times)
+            self.tool.graph_tuple_list(rec_rate_lst)
             receive_legend.append(host)
 
         # Finalize sent graph.
         plt.subplot(433)
         plt.legend(sent_legend)
         # Set up labels.
-        plt.xlabel("Time (Sec)")
+        plt.xlabel("Time (sec)")
         plt.ylabel("Packet Sent Times")
         # Set up grid on graph.
         plt.grid(True)
@@ -218,7 +253,7 @@ class Grapher(object):
         plt.subplot(436)
         plt.legend(receive_legend)
         # Set up labels.
-        plt.xlabel("Time (Sec)")
+        plt.xlabel("Time (sec)")
         plt.ylabel("Packet Received Times")
         # Set up grid on graph.
         plt.grid(True)
@@ -243,7 +278,7 @@ class Grapher(object):
 
         # Make spacing between plots.
         plt.tight_layout()
-        plt.axis('equal')
+        #plt.axis('equal')
         plt.show()
 
 # Plot examples.
@@ -251,21 +286,21 @@ class Grapher(object):
 test = Grapher()
 
 host_stats = HostStats()
-host_stats.packet_sent_times = [1, 3, 5, 7, 10]
-host_stats.packet_rec_times = [2, 3, 4, 5, 6]
+host_stats.packet_sent_times = [(0.03, 2),(0.05, 3), (0.05, 4), (0.07, 5)]
+host_stats.packet_rec_times = [(0.03, 2),(0.05, 3), (0.05, 4), (0.07, 5)]
 host_stats2 = HostStats()
-host_stats2.packet_sent_times = [1.5, 3, 3.5, 4]
-host_stats2.packet_rec_times = [1.5, 2.5, 3.5, 4.5]
+host_stats2.packet_sent_times = [(0.03, 2),(0.05, 3), (0.05, 4), (0.07, 5)]
+host_stats2.packet_rec_times = [(0.03, 2),(0.05, 3), (0.05, 4), (0.07, 5)]
 dct = {"hostaddr1": host_stats, "hostaddr2": host_stats2}
 
 flow_stats = FlowStats()
-flow_stats.packet_sent_times = [1, 3, 5, 7, 10]
-flow_stats.packet_rec_times = [2, 3, 4, 5, 6]
+flow_stats.packet_sent_times = [(0.01, 1), (0.02, 3), (0.05, 5), (0.06, 7)]
+flow_stats.packet_rec_times = [(0.01, 1), (0.02, 3), (0.05, 5), (0.06, 7)]
 flow_stats.packet_rtts = [3.5, 3.2, 2.5, 7.0]
 flow_stats.window_size_times = [(0., 1), (1., 3), (2., 5)]
 flow_stats2 = FlowStats()
-flow_stats2.packet_sent_times = [1.5, 3, 3.5, 4]
-flow_stats2.packet_rec_times = [1.5, 2.5, 3.5, 4.5]
+flow_stats2.packet_sent_times = [(0.01, 1), (0.02, 3), (0.05, 5), (0.06, 7)]
+flow_stats2.packet_rec_times = [(0.01, 1), (0.02, 3), (0.05, 5), (0.06, 7)]
 flow_stats2.packet_rtts = [3., 2., 1.5, 2.5]
 flow_stats2.window_size_times = [(0.5, 3), (1.5, 2), (2.5, 6)]
 dct2 = {"flow_id1": flow_stats, "flow_id2": flow_stats2}
@@ -278,6 +313,6 @@ link_stats2 = LinkStats()
 link_stats2.buffer_occupancy = [(0.5, 2), (1.5, 3), (2.5, 2)]
 link_stats2.packet_loss_times = [1.5, 2.5, 3.5, 4.5]
 link_stats2.packet_transmit_times = [(1.5, 3), (2.5, 4), (3.5, 2.2)]
-dct3 = {"(addr1, addr2)": link_stats, "(addr3, addr4)": link_stats2}
+dct3 = {"linkname_a": link_stats, "linkname_b": link_stats2}
 
 test.graph_network(dct3, dct2, dct)

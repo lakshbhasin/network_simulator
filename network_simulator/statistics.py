@@ -34,11 +34,10 @@ class FlowStats(object):
     Contains information of a flow related to timestamps of each sending
     and receiving.
 
-    :ivar list packet_sent_times: a list of timestamps corresponding to
-    when a data packet was sent. Time is in seconds.
-    :ivar list packet_rec_times: a list of timestamps corresponding to
-    when an ACK packet was received for this :class:`.Flow`. Time is in
-    seconds.
+    :ivar list packet_sent_times: a list of (timestamp, packet_size)
+    tuples. packet_size is in bits. Time is in seconds.
+    :ivar list packet_rec_times: a list of (timestamp, packet_size)
+    tuples. packet_size is in bits. Time is in seconds.
     :ivar list packet_rtts: a list of RTTs (in seconds).
     :ivar list window_size_times: a list of (timestamp, window_size) with
     window_size in number of packets.
@@ -72,8 +71,7 @@ class Statistics(object):
     Intended to be owned by the main loop to record all statistics within
     the network.
 
-    :ivar dict link_stats: a map from (end_1_id, end_2_id) to
-    :class:`.LinkStats`. end_id's are strings.
+    :ivar dict link_stats: a map from link name to :class:`.LinkStats`.
     :ivar dict flow_stats: a map from flow ID to :class:`.FlowStats`. flow
     ids are strings.
     :ivar dict host_stats: a map from host ID to :class:`.HostStats`. host
@@ -93,12 +91,9 @@ class Statistics(object):
         :param Link link: link to be determined.
         :return :class:`.LinkStats`.
         """
-        # Create a tuple of the pair and check if it exists in the dict.
-        tup = (link.end_1_addr, link.end_2_addr)
-
-        if tup not in self.link_stats:
-            self.link_stats[tup] = LinkStats()
-        return self.link_stats[tup]
+        if link.name not in self.link_stats:
+            self.link_stats[link.name] = LinkStats()
+        return self.link_stats[link.name]
 
     def get_flow_stats(self, flow):
         """
@@ -169,7 +164,8 @@ class Statistics(object):
         :param DataPacket data_packet: data packet to send.
         """
         stats = self.get_flow_stats(flow)
-        stats.packet_sent_times.append(data_packet.start_time_sec)
+        stats.packet_sent_times.append(
+            (data_packet.start_time_sec, data_packet.size_bits))
 
     def flow_packet_received(self, flow, ack_packet, curr_time):
         """
@@ -184,7 +180,8 @@ class Statistics(object):
         # Retrieve data packet sent time from the ack packet and use
         # it to calculate RTT.
         sent_time = ack_packet.data_packet_start_time_sec
-        stats.packet_rtts.append(curr_time - sent_time)
+        stats.packet_rtts.append(
+            (curr_time - sent_time, ACK_PACKET_SIZE_BITS))
 
     def flow_window_size(self, flow, curr_time):
         """
