@@ -10,6 +10,30 @@ class PlotTool(object):
     def __init__(self):
         pass
 
+    def gen_count_interval_list(self, lst):
+        """
+        Computes a tuple list of counts based on a timestamp list.
+
+        :param list lst: list of timestamps to be converted.
+        :return: list
+        """
+        curr_count = 0
+        curr_time = GRAPH_WINDOW_SIZE
+        output = []
+        for idx in range(len(lst)):
+            timestamp = lst[idx]
+            if timestamp > curr_time:
+                output.append((curr_time, curr_count))
+                curr_count = 0
+                curr_time += GRAPH_WINDOW_SIZE
+            if timestamp <= curr_time:
+                curr_count += 1
+        # Append the last elements if they did not reach an end of an
+        # interval.
+        if curr_count != 0:
+            output.append((curr_time, curr_count))
+        return output
+
     def gen_rate_tuple_list(self, tuple_list):
         """
         Computes a tuple list of rates based on a (timestamp, data) tuple
@@ -101,7 +125,9 @@ class Grapher(object):
 
             # Packet loss times.
             plt.subplot(434)
-            self.tool.graph_1d_list(link_stats.packet_loss_times)
+            loss_rate_lst = self.tool.gen_count_interval_list(
+                link_stats.packet_loss_times)
+            self.tool.graph_tuple_list(loss_rate_lst)
             loss_legend.append(link)
 
             # Packet transmission w.r.t time.
@@ -123,7 +149,7 @@ class Grapher(object):
         plt.legend(loss_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Packet Loss Times")
+        plt.ylabel("Packet Losses")
         # Set up grid on graph.
         plt.grid(True)
 
@@ -178,7 +204,7 @@ class Grapher(object):
         plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Packet Sent Times")
+        plt.ylabel("Packet Sent Rate")
         # Set up grid on graph.
         plt.grid(True)
 
@@ -187,7 +213,7 @@ class Grapher(object):
         plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Packet Received Times")
+        plt.ylabel("Packet Received Rate")
         # Set up grid on graph.
         plt.grid(True)
 
@@ -239,7 +265,7 @@ class Grapher(object):
         plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Packet Sent Times")
+        plt.ylabel("Packet Sent Rate")
         # Set up grid on graph.
         plt.grid(True)
 
@@ -248,7 +274,7 @@ class Grapher(object):
         plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Packet Received Times")
+        plt.ylabel("Packet Received Rate")
         # Set up grid on graph.
         plt.grid(True)
 
