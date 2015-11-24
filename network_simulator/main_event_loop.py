@@ -76,8 +76,11 @@ class MainEventLoop(object):
                 next_event.run(self.statistics)
                 next_event.schedule_new_events(self)
             except:
-                # TODO(team): Output Statistics collected so far.
                 logger.warning("Unexpected error. Outputting Statistics...")
+                # Graph output.
+                grapher = Grapher(self.statistics)
+                grapher.graph_network()
+                logger.info("Finished running main Event loop.")
                 raise
 
             if isinstance(next_event, FlowCompleteEvent):

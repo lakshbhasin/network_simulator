@@ -1,74 +1,84 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from statistics import *
+from common import *
 
 class PlotTool(object):
     """
     Produces graph of different data structures.
-    """
-    def __init__(self):
-        pass
 
-    def gen_count_interval_list(self, lst):
+    Windowing is used to group together data that occurred between a given
+    timestamp and the previous timestamp in the output list (where the
+    timestamps are regularly spaced apart in the output list; the constant
+    for spacing is defined in common.py).
+    """
+    @staticmethod
+    def gen_count_interval_list(lst):
         """
         Computes a tuple list of counts based on a timestamp list.
 
         :param list lst: list of timestamps to be converted.
-        :return: list
+        :return: list: a list of (time, count) tuples where the counts are
+        aggregated count of data within the window time.
         """
-        curr_count = 0
-        curr_time = GRAPH_WINDOW_SIZE
+        # Count within one window interval.
+        curr_window_count = 0
+        # End point of each window interval.
+        curr_window_end_time = GRAPH_WINDOW_SIZE
         output = []
         for idx in range(len(lst)):
             timestamp = lst[idx]
-            if timestamp > curr_time:
-                output.append((curr_time, curr_count))
+            if timestamp > curr_window_end_time:
+                output.append((curr_window_end_time, curr_window_count))
                 curr_count = 0
-                curr_time += GRAPH_WINDOW_SIZE
-            if timestamp <= curr_time:
-                curr_count += 1
+                curr_window_end_time += GRAPH_WINDOW_SIZE
+            if timestamp <= curr_window_end_time:
+                curr_window_count += 1
         # Append the last elements if they did not reach an end of an
         # interval.
-        if curr_count != 0:
-            output.append((curr_time, curr_count))
+        if curr_window_count != 0:
+            output.append((curr_window_end_time, curr_window_count))
         return output
 
-    def gen_rate_tuple_list(self, tuple_list):
+    @staticmethod
+    def gen_rate_tuple_list(tuple_list):
         """
-        Computes a tuple list of rates based on a (timestamp, data) tuple
-        list.
+        Computes a tuple list of rates based on a (timestamp, packet_size)
+        tuple list.
 
         :param list tuple_list: list of tuples to be converted.
-        :return: list
+        :return: list: a list of (timestamp, rate in Mbps) where the
+        timestamps are multiples of window size and bit rate is
+        (packet size) / (time interval).
         """
-        curr_count = 0
-        curr_sum = 0
-        curr_time = GRAPH_WINDOW_SIZE
+        curr_bit_sum = 0
+        curr_window_end_time = GRAPH_WINDOW_SIZE
         output = []
         for tup_idx in range(len(tuple_list)):
-            timestamp, data = tuple_list[tup_idx]
-            if timestamp > curr_time:
-                if curr_count != 0:
-                    output.append((curr_time, float(curr_sum) / curr_count))
-                    curr_count = 0
-                    curr_sum = 0
-                curr_time += GRAPH_WINDOW_SIZE
-            if timestamp <= curr_time:
-                curr_count += 1
-                curr_sum += data
+            timestamp, packet_size = tuple_list[tup_idx]
+            if timestamp > curr_window_end_time:
+                output.append(
+                    (curr_window_end_time,
+                     float(curr_bit_sum) / GRAPH_WINDOW_SIZE / MEGABIT))
+                curr_bit_sum = 0
+                curr_window_end_time += GRAPH_WINDOW_SIZE
+            if timestamp <= curr_window_end_time:
+                curr_bit_sum += packet_size
         # Append the last elements if they did not reach an end of an
         # interval.
-        if curr_count != 0:
-            output.append((curr_time, float(curr_sum) / curr_count))
+        if curr_bit_sum != 0:
+            output.append(
+                (curr_window_end_time,
+                 float(curr_bit_sum) / GRAPH_WINDOW_SIZE / MEGABIT))
         return output
 
-    def graph_tuple_list(self, tuple_list=[], scatter=False):
+    @staticmethod
+    def graph_tuple_list(tuple_list=[], scatter=False):
         """
         Graphs the content of a tuple list.
 
-        :param list tuple_list: if we have a newer version of the list,
-        we would like to replace the previous version.
+        :param list tuple_list: current input tuple list to be plotted
+        (this list is a 2-D list containing (timestamp, data) tuples).
         :param boolean scatter: if we want a scatter plot, we set this
         variable to True; otherwise, it would be a line graph.
         """
@@ -82,17 +92,7 @@ class PlotTool(object):
             # Line graph
             plt.plot(*zip(*tuple_list), marker='o', linestyle='--')
 
-    def graph_1d_list(self, lst=[]):
-        """
-        Graphs the content of a list.
 
-        :param list lst: list of values for the 1-D graph.
-        """
-        if not lst:
-            return
-
-        # Plot 1-D different values on a x-y plane.
-        plt.plot(lst, np.zeros_like(lst), marker='o', linestyle='--')
 
 class Grapher(object):
     """
@@ -101,39 +101,45 @@ class Grapher(object):
     def __init__(self, stats=None):
         """
         :ivar Statistics stats: input Statistics object for graphing.
-        :ivar PlotTool tool: graphing functions.
         """
         self.stats = stats
-        self.tool = PlotTool()
 
     def graph_links(self):
         """
         Graphs the link stats of each available link.
+
+        This includes buffer occupancy, packet losses, and packet transmitted
+        (flow rate).
         """
         # Set up legend storage for link names.
+        # Buffer occupancy legend.
         occpy_legend = []
+        # Packet loss legend.
         loss_legend = []
+        # Packet transmission legend.
         trans_legend = []
 
         # Iterate through each link to display each stats.
-        for link, link_stats in self.stats.link_stats.iteritems():
+        for link_name, link_stats in self.stats.link_stats.iteritems():
             # Name of link would be "link_name".
             # Buffer occupancy w.r.t time.
             plt.subplot(431)
-            self.tool.graph_tuple_list(link_stats.buffer_occupancy)
-            occpy_legend.append(link)
+            PlotTool.graph_tuple_list(link_stats.buffer_occupancy)
+            occpy_legend.append(link_name)
 
             # Packet loss times.
             plt.subplot(434)
-            loss_rate_lst = self.tool.gen_count_interval_list(
+            loss_count_lst = PlotTool.gen_count_interval_list(
                 link_stats.packet_loss_times)
-            self.tool.graph_tuple_list(loss_rate_lst)
-            loss_legend.append(link)
+            PlotTool.graph_tuple_list(loss_count_lst)
+            loss_legend.append(link_name)
 
             # Packet transmission w.r.t time.
             plt.subplot(437)
-            self.tool.graph_tuple_list(link_stats.packet_transmit_times)
-            trans_legend.append(link)
+            flow_rate_list = PlotTool.gen_rate_tuple_list(
+                link_stats.packet_transmit_times)
+            PlotTool.graph_tuple_list(flow_rate_list)
+            trans_legend.append(link_name)
 
         # Finalize buffer occupancy graph.
         plt.subplot(431)
@@ -141,8 +147,6 @@ class Grapher(object):
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Buffer Occupancy (pkts)")
-        # Set up grid on graph.
-        plt.grid(True)
 
         # Finalize loss times graph.
         plt.subplot(434)
@@ -150,72 +154,70 @@ class Grapher(object):
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Packet Losses")
-        # Set up grid on graph.
-        plt.grid(True)
 
         # Finalize packet transmission graph.
         plt.subplot(437)
         plt.legend(trans_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Size of Packet Transmitted (Bits)")
-        # Set up grid on graph.
-        plt.grid(True)
+        plt.ylabel("Flow Rate (Mbps)")
 
     def graph_flows(self):
         """
         Graphs the flow stats of each available flow.
+
+        This includes flow send and receive rates and packet RTTs.
         """
         # Set up legend storage for flow names.
+        # Packet sent rate legend.
         sent_legend = []
+        # Packet received rate legend.
         receive_legend = []
+        # RTT legend.
         rtt_legend = []
+        # Window size legend.
         window_legend = []
 
         # Iterate through each flow to display each stats.
-        for flow, flow_stats in self.stats.flow_stats.iteritems():
+        for flow_id, flow_stats in self.stats.flow_stats.iteritems():
             # Name of flow would be "flow_id".
             # Packet sent times.
             plt.subplot(432)
-            sent_rate_lst = self.tool.gen_rate_tuple_list(
+            sent_rate_lst = PlotTool.gen_rate_tuple_list(
                 flow_stats.packet_sent_times)
-            self.tool.graph_tuple_list(sent_rate_lst)
-            sent_legend.append(flow)
+            PlotTool.graph_tuple_list(sent_rate_lst)
+            sent_legend.append(flow_id)
 
             # Packet receive times.
             plt.subplot(435)
-            rec_rate_lst = self.tool.gen_rate_tuple_list(
+            rec_rate_lst = PlotTool.gen_rate_tuple_list(
                 flow_stats.packet_rec_times)
-            self.tool.graph_tuple_list(rec_rate_lst)
-            receive_legend.append(flow)
+            PlotTool.graph_tuple_list(rec_rate_lst)
+            receive_legend.append(flow_id)
 
             # Packet RTT times.
             plt.subplot(438)
-            self.tool.graph_1d_list(flow_stats.packet_rtts)
-            rtt_legend.append(flow)
+            PlotTool.graph_tuple_list(flow_stats.packet_rtts)
+            rtt_legend.append(flow_id)
 
             # Window size in packets w.r.t time.
             plt.subplot(4,3,11)
-            self.tool.graph_tuple_list(flow_stats.window_size_times)
-            window_legend.append(flow)
+            PlotTool.graph_tuple_list(flow_stats.window_size_times)
+            window_legend.append(flow_id)
 
         # Finalize sent graph.
         plt.subplot(432)
         plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Packet Sent Rate")
-        # Set up grid on graph.
-        plt.grid(True)
+        plt.ylabel("Flow send rate (Mbps)")
 
         # Finalize receive graph.
         plt.subplot(435)
         plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Packet Received Rate")
-        # Set up grid on graph.
-        plt.grid(True)
+        plt.ylabel("Flow Receive Rate (Mbps)")
 
         # Finalize RTT graph.
         plt.subplot(438)
@@ -223,8 +225,6 @@ class Grapher(object):
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("RTT (sec)")
-        # Set up grid on graph.
-        plt.grid(True)
 
         # Finalize window size graph.
         plt.subplot(4,3,11)
@@ -232,55 +232,54 @@ class Grapher(object):
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Window Size (pkts)")
-        # Set up grid on graph.
-        plt.grid(True)
 
     def graph_hosts(self):
         """
         Graphs the host stats of each available host.
+
+        This includes host send and receive rates.
         """
-        # Set up legend storage for host names.
+        # Set up legend storage for host names, which are their addresses
+        # in strings.
+        # Packet sent rate legend.
         sent_legend = []
+        # Packet received rate legend.
         receive_legend = []
 
         # Iterate through each host to display each stats.
-        for host, host_stats in self.stats.host_stats.iteritems():
-            # Name of host would be "host_address".
+        for host_addr, host_stats in self.stats.host_stats.iteritems():
+            # Name of host would be "address".
             # Packet sent times.
             plt.subplot(433)
-            sent_rate_lst = self.tool.gen_rate_tuple_list(
+            sent_rate_lst = PlotTool.gen_rate_tuple_list(
                 host_stats.packet_sent_times)
-            self.tool.graph_tuple_list(sent_rate_lst)
-            sent_legend.append(host)
+            PlotTool.graph_tuple_list(sent_rate_lst)
+            sent_legend.append(host_addr)
 
             # Packet receive times.
             plt.subplot(436)
-            rec_rate_lst = self.tool.gen_rate_tuple_list(
+            rec_rate_lst = PlotTool.gen_rate_tuple_list(
                 host_stats.packet_rec_times)
-            self.tool.graph_tuple_list(rec_rate_lst)
-            receive_legend.append(host)
+            PlotTool.graph_tuple_list(rec_rate_lst)
+            receive_legend.append(host_addr)
 
         # Finalize sent graph.
         plt.subplot(433)
         plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Packet Sent Rate")
-        # Set up grid on graph.
-        plt.grid(True)
+        plt.ylabel("Host Send Rate (Mbps)")
 
         # Finalize receive graph.
         plt.subplot(436)
         plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Packet Received Rate")
-        # Set up grid on graph.
-        plt.grid(True)
+        plt.ylabel("Host Receive Rate (Mbps)")
 
     def graph_network(self):
         """
-        Graphs the entire network (this includes all links, flows, and hosts.
+        Graphs the entire network (this includes all links, flows, and hosts).
         """
         # Set up matplotlib window name.
         fig = plt.figure()
@@ -296,5 +295,4 @@ class Grapher(object):
 
         # Make spacing between plots.
         plt.tight_layout()
-        #plt.axis('equal')
         plt.show()

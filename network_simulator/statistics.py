@@ -38,9 +38,10 @@ class FlowStats(object):
     tuples. packet_size is in bits. Time is in seconds.
     :ivar list packet_rec_times: a list of (timestamp, packet_size)
     tuples. packet_size is in bits. Time is in seconds.
-    :ivar list packet_rtts: a list of RTTs (in seconds).
+    :ivar list packet_rtts: a list of RTTs (timestamp, RTT) tuples where
+    RTTs are given in seconds.
     :ivar list window_size_times: a list of (timestamp, window_size) with
-    window_size in number of packets.
+    timestamps in seconds and window_size in number of packets.
     """
     def __init__(self, packet_sent_times=[], packet_rec_times=[],
                  packet_rtts=[], window_size_times=[]):
@@ -163,6 +164,9 @@ class Statistics(object):
         :param Flow flow: flow of action.
         :param DataPacket data_packet: data packet to send.
         """
+        # Make sure the packet received is a data packet.
+        assert isinstance(data_packet, DataPacket)
+
         stats = self.get_flow_stats(flow)
         stats.packet_sent_times.append(
             (data_packet.start_time_sec, data_packet.size_bits))
@@ -175,13 +179,16 @@ class Statistics(object):
         :param AckPacket ack_packet: ack packet received.
         :param float curr_time: simulation time of reception.
         """
+        # Make sure the packet received is an ACK packet.
+        assert isinstance(ack_packet, AckPacket)
+
         stats = self.get_flow_stats(flow)
         stats.packet_rec_times.append(curr_time)
         # Retrieve data packet sent time from the ack packet and use
         # it to calculate RTT.
         sent_time = ack_packet.data_packet_start_time_sec
         stats.packet_rtts.append(
-            (curr_time - sent_time, ACK_PACKET_SIZE_BITS))
+            (curr_time - sent_time, ack_packet.size_bits))
 
     def flow_window_size(self, flow, curr_time):
         """
@@ -190,6 +197,7 @@ class Statistics(object):
         :param Flow flow: flow of action.
         :param float curr_time: simulation time of change.
         """
+        # TODO(laksh): Incorporate this into flow.py code to plot.
         stats = self.get_flow_stats(flow)
         stats.window_size_times.append((curr_time, flow.window_size_packets))
 
