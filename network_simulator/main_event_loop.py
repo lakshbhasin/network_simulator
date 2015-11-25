@@ -5,8 +5,9 @@ Module for the MainEventLoop class.
 from Queue import PriorityQueue
 import logging
 
-from statistics import Statistics
 from flow import FlowCompleteEvent, InitiateFlowEvent, PeriodicFlowInterrupt
+from plot_tool import Analyzer
+from statistics import Statistics
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +87,11 @@ class MainEventLoop(object):
                     next_event.run(self, self.statistics)
                     next_event.schedule_new_events(self)
                 except:
-                    # TODO(team): Output Statistics collected so far.
                     logger.warning("Unexpected error. Outputting Statistics...")
+                    # Graph output.
+                    analyzer = Analyzer(self.statistics)
+                    analyzer.graph_network()
+                    logger.info("Finished running main Event loop.")
                     raise
 
             if isinstance(next_event, FlowCompleteEvent):
@@ -102,4 +106,7 @@ class MainEventLoop(object):
         logger.info("Finished running main Event loop.")
         logger.info("Time taken: %f s.", self.global_clock_sec)
 
-        # TODO(team): Output final Statistics
+        # Graph output.
+        analyzer = Analyzer(self.statistics)
+        analyzer.graph_network()
+        logger.info("Finished plotting network statistics.")
