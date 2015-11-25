@@ -234,7 +234,7 @@ class Analyzer(object):
             # Output average packet transmitted per sec to log.
             PlotTool.output_rate_avg_tuple_list(
                 id="Link " + link_name,
-                value_type="Packet Transmitted", units="(Mbps)",
+                value_type="Transmission Rate", units="(Mbps)",
                 tuple_list=link_stats.packet_transmit_times)
 
         # Finalize buffer occupancy graph.
@@ -286,7 +286,7 @@ class Analyzer(object):
             # Output average packet sent per sec to log.
             PlotTool.output_rate_avg_tuple_list(
                 id="Flow " + flow_id,
-                value_type="Packet Sent", units="(Mbps)",
+                value_type="Send Rate", units="(Mbps)",
                 tuple_list=flow_stats.packet_sent_times)
 
             # Packet receive times.
@@ -298,7 +298,7 @@ class Analyzer(object):
             # Output average packet received per sec to log.
             PlotTool.output_rate_avg_tuple_list(
                 id="Flow " + flow_id,
-                value_type="Packet Received", units="(Mbps)",
+                value_type="Receive Rate", units="(Mbps)",
                 tuple_list=flow_stats.packet_rec_times)
 
             # Packet RTT times.
@@ -374,7 +374,7 @@ class Analyzer(object):
             # Output average packet received per sec to log.
             PlotTool.output_rate_avg_tuple_list(
                 id="Host " + host_addr,
-                value_type="Packet Sent", units="(Mbps)",
+                value_type="Send Rate", units="(Mbps)",
                 tuple_list=host_stats.packet_sent_times)
 
             # Packet receive times.
@@ -386,7 +386,7 @@ class Analyzer(object):
             # Output average packet received per sec to log.
             PlotTool.output_rate_avg_tuple_list(
                 id="Host " + host_addr,
-                value_type="Packet Received", units="(Mbps)",
+                value_type="Receive Rate", units="(Mbps)",
                 tuple_list=host_stats.packet_rec_times)
 
         # Finalize sent graph.
