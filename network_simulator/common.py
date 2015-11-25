@@ -65,4 +65,4 @@ TCP_INITIAL_SS_THRESH = 32.0
 """
 Window size in time interval for graphing in seconds.
 """
-GRAPH_WINDOW_SIZE = 0.05
+GRAPH_WINDOW_SIZE = 0.10
