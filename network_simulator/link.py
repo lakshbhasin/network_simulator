@@ -38,7 +38,7 @@ class LinkBuffer(object):
     """
     MAX_DATA_AGE_SEC = 1.0
 
-    def __init__(self, max_buffer_size_bits=None, queue=None):
+    def __init__(self, max_buffer_size_bits):
         """
         :ivar int max_buffer_size_bits: maximum buffer size in bits.
         :ivar Queue queue: a FIFO queue of LinkBufferElements. This is
@@ -51,7 +51,7 @@ class LinkBuffer(object):
         network_topology.py.
         """
         self.max_buffer_size_bits = max_buffer_size_bits
-        self.queue = queue
+        self.queue = None
         self.curr_buffer_size_bits = 0
         self.queuing_delays = None
 
@@ -177,9 +177,8 @@ class Link(object):
     specified, but not the Devices themselves (since those are references).
     """
 
-    def __init__(self, name=None, end_1_addr=None, end_2_addr=None, end_1_device=None,
-            end_2_device=None, link_buffer=LinkBuffer(), static_delay_sec=None,
-            capacity_bps=None, busy=False):
+    def __init__(self, name, end_1_addr, end_2_addr, link_buffer,
+                 static_delay_sec, capacity_bps):
         """
         :ivar str name: name of a Link
         :ivar string end_1_addr: address of Device on one end (e.g. "H1").
@@ -195,12 +194,12 @@ class Link(object):
         self.name = name
         self.end_1_addr = end_1_addr
         self.end_2_addr = end_2_addr
-        self.end_1_device = end_1_device
-        self.end_2_device = end_2_device
+        self.end_1_device = None  # initialized later in network_topology
+        self.end_2_device = None  # initialized later in network_topology
         self.link_buffer = link_buffer
         self.static_delay_sec = static_delay_sec
         self.capacity_bps = capacity_bps
-        self.busy = busy
+        self.busy = False
 
     def __repr__(self):
         return str(self.__dict__)

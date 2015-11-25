@@ -178,7 +178,7 @@ class Analyzer(object):
     Graphs statistics items from Statistics class and logs averages of data
     for each network device.
     """
-    def __init__(self, stats=None):
+    def __init__(self, stats):
         """
         :ivar Statistics stats: input Statistics object for graphing.
         """
@@ -200,7 +200,7 @@ class Analyzer(object):
         trans_legend = []
 
         # Iterate through each link to display each stats.
-        for link_name, link_stats in self.stats.link_stats.iteritems():
+        for link_name, link_stats in sorted(self.stats.link_stats.iteritems()):
             # Name of link would be "link_name".
             # Buffer occupancy w.r.t time.
             plt.subplot(431)
@@ -239,21 +239,21 @@ class Analyzer(object):
 
         # Finalize buffer occupancy graph.
         plt.subplot(431)
-        plt.legend(occpy_legend.sort())
+        plt.legend(occpy_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Buffer Occupancy (pkts)")
 
         # Finalize loss times graph.
         plt.subplot(434)
-        plt.legend(loss_legend.sort())
+        plt.legend(loss_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Packet Losses")
 
         # Finalize packet transmission graph.
         plt.subplot(437)
-        plt.legend(trans_legend.sort())
+        plt.legend(trans_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Flow Rate (Mbps)")
@@ -275,7 +275,7 @@ class Analyzer(object):
         window_legend = []
 
         # Iterate through each flow to display each stats.
-        for flow_id, flow_stats in self.stats.flow_stats.iteritems():
+        for flow_id, flow_stats in sorted(self.stats.flow_stats.iteritems()):
             # Name of flow would be "flow_id".
             # Packet sent times.
             plt.subplot(432)
@@ -323,28 +323,28 @@ class Analyzer(object):
 
         # Finalize sent graph.
         plt.subplot(432)
-        plt.legend(sent_legend.sort())
+        plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Flow send rate (Mbps)")
 
         # Finalize receive graph.
         plt.subplot(435)
-        plt.legend(receive_legend.sort())
+        plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Flow Receive Rate (Mbps)")
 
         # Finalize RTT graph.
         plt.subplot(438)
-        plt.legend(rtt_legend.sort())
+        plt.legend(rtt_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("RTT (sec)")
 
         # Finalize window size graph.
         plt.subplot(4,3,11)
-        plt.legend(window_legend.sort())
+        plt.legend(window_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Window Size (pkts)")
@@ -363,7 +363,7 @@ class Analyzer(object):
         receive_legend = []
 
         # Iterate through each host to display each stats.
-        for host_addr, host_stats in self.stats.host_stats.iteritems():
+        for host_addr, host_stats in sorted(self.stats.host_stats.iteritems()):
             # Name of host would be "address".
             # Packet sent times.
             plt.subplot(433)
@@ -391,14 +391,14 @@ class Analyzer(object):
 
         # Finalize sent graph.
         plt.subplot(433)
-        plt.legend(sent_legend.sort())
+        plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Host Send Rate (Mbps)")
 
         # Finalize receive graph.
         plt.subplot(436)
-        plt.legend(receive_legend.sort())
+        plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
         plt.ylabel("Host Receive Rate (Mbps)")
@@ -410,6 +410,7 @@ class Analyzer(object):
         # Set up matplotlib window name.
         fig = plt.figure()
         fig.canvas.set_window_title("Network Statistics")
+        fig.set_facecolor("white")
 
         # Figure adjust to window size.
         fig.set_size_inches(35, 10.5, forward=True)

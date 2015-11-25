@@ -5,6 +5,7 @@ graphing).
 
 from packet import *
 
+
 class LinkStats(object):
     """
     Contains information of a link related to per-link buffer occupancy,
@@ -18,9 +19,9 @@ class LinkStats(object):
     corresponding to when a packet was transmitted. packet_size is in bits.
     """
     def __init__(self):
-        self.buffer_occupancy = list()
-        self.packet_loss_times = list()
-        self.packet_transmit_times = list()
+        self.buffer_occupancy = []
+        self.packet_loss_times = []
+        self.packet_transmit_times = []
 
 
 class FlowStats(object):
@@ -37,12 +38,11 @@ class FlowStats(object):
     :ivar list window_size_times: a list of (timestamp, window_size) with
     timestamps in seconds and window_size in number of packets.
     """
-    def __init__(self, packet_sent_times=[], packet_rec_times=[],
-                 packet_rtts=[], window_size_times=[]):
-        self.packet_sent_times = packet_sent_times
-        self.packet_rec_times = packet_rec_times
-        self.packet_rtts = packet_rtts
-        self.window_size_times = window_size_times
+    def __init__(self):
+        self.packet_sent_times = []
+        self.packet_rec_times = []
+        self.packet_rtts = []
+        self.window_size_times = []
 
 
 class HostStats(object):
@@ -54,9 +54,9 @@ class HostStats(object):
     :ivar list packet_rec_times: a list of (timestamp, packet_size)
     tuples. packet_size is in bits. Time is in seconds.
     """
-    def __init__(self, packet_sent_times=[], packet_rec_times=[]):
-        self.packet_sent_times = packet_sent_times
-        self.packet_rec_times = packet_rec_times
+    def __init__(self):
+        self.packet_sent_times = []
+        self.packet_rec_times = []
 
 
 class Statistics(object):

@@ -37,13 +37,13 @@ class Router(Device):
     :ivar list neighbors: a list of Devices directly connected to this
         Router. This is assumed to not change over time (i.e. no destruction).
     """
-    def __init__(self, address, links=None):
+    def __init__(self, address):
         Device.__init__(self, address)
         self.new_routing_table = dict()
         self.stable_routing_table = None
         self.neighb_to_host_dists = dict()
         self.self_to_host_dists = dict()
-        self.links = links
+        self.links = None  # initialized later in network_topology.py
         self.last_table_update_timestamp = 0.0
         self.neighbors = []
         self.self_to_neighb_dists = dict()

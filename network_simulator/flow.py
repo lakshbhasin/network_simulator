@@ -47,10 +47,8 @@ class Flow(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, flow_id=None, source_addr=None, dest_addr=None,
-                 source=None, dest=None,
-                 window_size_packets=INITIAL_WINDOW_SIZE_PACKETS,
-                 data_size_bits=None, start_time_sec=None):
+    def __init__(self, flow_id, source_addr, dest_addr,
+                 data_size_bits, start_time_sec):
         """
         :ivar string flow_id: unique string ID for this Flow.
         :ivar string source_addr: address of source Host.
@@ -81,9 +79,9 @@ class Flow(object):
         self.flow_id = flow_id
         self.source_addr = source_addr
         self.dest_addr = dest_addr
-        self.source = source
-        self.dest = dest
-        self.window_size_packets = float(window_size_packets)
+        self.source = None  # initialized later in network_topology.py
+        self.dest = None  # initialized later in network_topology.py
+        self.window_size_packets = float(INITIAL_WINDOW_SIZE_PACKETS)
         self.packets_in_transit = set()
         self.packet_rtts = list()
         self.data_size_bits = data_size_bits
@@ -264,14 +262,11 @@ class FlowDummy(Flow):
     size. Losses result in retransmits.
     """
 
-    def __init__(self, flow_id=None, source_addr=None, dest_addr=None,
-                 source=None, dest=None,
-                 data_size_bits=None, start_time_sec=None):
+    def __init__(self, flow_id, source_addr, dest_addr,
+                 data_size_bits, start_time_sec):
         super(FlowDummy, self).__init__(flow_id=flow_id,
                                         source_addr=source_addr,
-                                        dest_addr=dest_addr, source=source,
-                                        dest=dest,
-                                        window_size_packets=1,
+                                        dest_addr=dest_addr,
                                         data_size_bits=data_size_bits,
                                         start_time_sec=start_time_sec)
 
@@ -318,10 +313,8 @@ class FlowReno(Flow):
     """
     ACK_GAPS_FR_FR = 3
 
-    def __init__(self, flow_id=None, source_addr=None, dest_addr=None,
-                 source=None, dest=None,
-                 window_size_packets=INITIAL_WINDOW_SIZE_PACKETS,
-                 data_size_bits=None, start_time_sec=None,
+    def __init__(self, flow_id, source_addr, dest_addr,
+                 data_size_bits, start_time_sec,
                  initial_ss_thresh=TCP_INITIAL_SS_THRESH):
         """
         Additional ivars (not in Flow):
@@ -338,9 +331,7 @@ class FlowReno(Flow):
         received.
         """
         super(FlowReno, self).__init__(flow_id=flow_id, source_addr=source_addr,
-                                       dest_addr=dest_addr, source=source,
-                                       dest=dest,
-                                       window_size_packets=window_size_packets,
+                                       dest_addr=dest_addr,
                                        data_size_bits=data_size_bits,
                                        start_time_sec=start_time_sec)
         assert initial_ss_thresh > 0
@@ -479,10 +470,8 @@ class FlowFast(Flow):
     for more details.
     """
 
-    def __init__(self, flow_id=None, source_addr=None, dest_addr=None,
-                 source=None, dest=None,
-                 window_size_packets=INITIAL_WINDOW_SIZE_PACKETS,
-                 data_size_bits=None, start_time_sec=None,
+    def __init__(self, flow_id, source_addr, dest_addr,
+                 data_size_bits, start_time_sec,
                  alpha=TCP_FAST_DEFAULT_ALPHA, gamma=TCP_FAST_DEFAULT_GAMMA,
                  num_packets_ave_for_rtt=TCP_NUM_PACKETS_AVE_FOR_RTT):
         """
@@ -495,9 +484,7 @@ class FlowFast(Flow):
         average in computing the average RTT.
         """
         super(FlowFast, self).__init__(flow_id=flow_id, source_addr=source_addr,
-                                       dest_addr=dest_addr, source=source,
-                                       dest=dest,
-                                       window_size_packets=window_size_packets,
+                                       dest_addr=dest_addr,
                                        data_size_bits=data_size_bits,
                                        start_time_sec=start_time_sec)
         self.alpha = alpha

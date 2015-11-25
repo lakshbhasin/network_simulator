@@ -29,9 +29,8 @@ class Packet(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, packet_id=None, flow_id=None, source_id=None,
-                 dest_id=None,
-                 start_time_sec=None, size_bits=None):
+    def __init__(self, packet_id, flow_id, source_id, dest_id,
+                 start_time_sec, size_bits):
 
         self.packet_id = packet_id
         self.flow_id = flow_id
@@ -50,8 +49,8 @@ class DataPacket(Packet):
     DataPacket class: a packet used for transferring data between Hosts.
     """
 
-    def __init__(self, packet_id=None, flow_id=None, source_id=None,
-                 dest_id=None, start_time_sec=None):
+    def __init__(self, packet_id, flow_id, source_id, dest_id,
+                 start_time_sec):
         Packet.__init__(self, packet_id=packet_id, flow_id=flow_id,
                         source_id=source_id, dest_id=dest_id,
                         start_time_sec=start_time_sec,
@@ -72,9 +71,9 @@ class AckPacket(Packet):
     FlowReceivedAckEvent.
     """
 
-    def __init__(self, packet_id=None, flow_id=None, source_id=None,
-                 dest_id=None, start_time_sec=None, flow_packets_received=[],
-                 data_packet_start_time_sec=None):
+    def __init__(self, packet_id, flow_id, source_id, dest_id,
+                 start_time_sec, flow_packets_received,
+                 data_packet_start_time_sec):
         Packet.__init__(self, packet_id=packet_id, flow_id=flow_id,
                         source_id=source_id, dest_id=dest_id,
                         start_time_sec=start_time_sec,
@@ -96,8 +95,8 @@ class RouterPacket(Packet):
         Router generating this packet and the Host represents one of its
         known Hosts. Costs are *min* costs.
     """
-    def __init__(self, source_id=None, dest_id=None, start_time_sec=None,
-                 router_to_host_dists=dict()):
+    def __init__(self, source_id, dest_id, start_time_sec,
+                 router_to_host_dists):
         Packet.__init__(self, packet_id=ROUTER_PACKET_DEFAULT_ID,
                         flow_id=None,
                         source_id=source_id, dest_id=dest_id,

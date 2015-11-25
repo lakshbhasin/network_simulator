@@ -25,11 +25,11 @@ class Host(Device):
     packet IDs that have been received for that Flow. This is used to carry
     out "selective repeat" instead of "go-back-N".
     """
-    def __init__(self, address, flows=None, link=None):
+    def __init__(self, address):
         Device.__init__(self, address)
-        self.flows = flows
+        self.flows = None  # initialized later in network_topology.py
         self.flow_packets_received = dict()
-        self.link = link
+        self.link = None  # initialized later in network_topology.py
 
 
 class HostReceivedPacketEvent(Event):
@@ -120,6 +120,8 @@ class HostReceivedPacketEvent(Event):
             dev_link_ev = DeviceToLinkEvent(a_packet, link, link.get_other_end(
                 self.host))
             main_event_loop.schedule_event_with_delay(dev_link_ev, 0.0)
+            main_event_loop.statistics.host_packet_sent(host=self.host,
+                                                        packet=a_packet)
 
 
 def elem_in_list(elem, my_list):
