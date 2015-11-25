@@ -16,8 +16,8 @@ class LinkStats(object):
 
     :ivar list buffer_occupancy: a list of (timestamp, buffer_occupancy)
     tuples.
-    :ivar list packet_loss_times: a list of (timestamps, packet_size), each
-    corresponding to a packet loss.
+    :ivar list packet_loss_times: a list of timestamps, each corresponds
+    to a packet loss.
     :ivar list packet_transmit_times: a list of (timestamp, packet_size)
     corresponding to when a packet was transmitted. packet_size is in bits.
     """
@@ -45,10 +45,10 @@ class FlowStats(object):
     """
     def __init__(self, packet_sent_times=[], packet_rec_times=[],
                  packet_rtts=[], window_size_times=[]):
-        packet_sent_times = packet_sent_times
-        packet_rec_times = packet_rec_times
-        packet_rtts = packet_rtts
-        window_size_times = window_size_times
+        self.packet_sent_times = packet_sent_times
+        self.packet_rec_times = packet_rec_times
+        self.packet_rtts = packet_rtts
+        self.window_size_times = window_size_times
 
 
 
@@ -62,9 +62,8 @@ class HostStats(object):
     tuples. packet_size is in bits. Time is in seconds.
     """
     def __init__(self, packet_sent_times=[], packet_rec_times=[]):
-        packet_sent_times = packet_sent_times
-        packet_rec_times = packet_rec_times
-
+        self.packet_sent_times = packet_sent_times
+        self.packet_rec_times = packet_rec_times
 
 
 class Statistics(object):
@@ -187,8 +186,7 @@ class Statistics(object):
         # Retrieve data packet sent time from the ack packet and use
         # it to calculate RTT.
         sent_time = ack_packet.data_packet_start_time_sec
-        stats.packet_rtts.append(
-            (curr_time - sent_time, ack_packet.size_bits))
+        stats.packet_rtts.append((curr_time, curr_time - sent_time))
 
     def flow_window_size(self, flow, curr_time):
         """

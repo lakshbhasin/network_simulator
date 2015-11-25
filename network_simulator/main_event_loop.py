@@ -5,7 +5,7 @@ Module for the MainEventLoop class.
 from Queue import PriorityQueue
 import logging
 
-from plot_tool import Grapher
+from plot_tool import Analyzer
 from statistics import *
 
 logger = logging.getLogger(__name__)
@@ -78,8 +78,8 @@ class MainEventLoop(object):
             except:
                 logger.warning("Unexpected error. Outputting Statistics...")
                 # Graph output.
-                grapher = Grapher(self.statistics)
-                grapher.graph_network()
+                analyzer = Analyzer(self.statistics)
+                analyzer.graph_network()
                 logger.info("Finished running main Event loop.")
                 raise
 
@@ -89,6 +89,6 @@ class MainEventLoop(object):
         logger.info("Finished running main Event loop.")
 
         # Graph output.
-        grapher = Grapher(self.statistics)
-        grapher.graph_network()
+        analyzer = Analyzer(self.statistics)
+        analyzer.graph_network()
         logger.info("Finished plotting network statistics.")
