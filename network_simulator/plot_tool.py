@@ -92,6 +92,7 @@ class PlotTool(object):
             # Line graph
             plt.plot(*zip(*tuple_list), marker='o', linestyle='--')
 
+    @staticmethod
     def output_sum_avg_tuple_list(id, value_type, count, units, tuple_list=[]):
         """
         Outputs the average value of a tuple list. This is a simple
@@ -119,8 +120,9 @@ class PlotTool(object):
             else:
                 latest_timestamp = tuple_list[len(tuple_list) - 1][0]
                 avg = float(curr_sum) / latest_timestamp
-        print id + " Average " + value_type + ": " + avg + " " + units
+        print id + " Average " + value_type + ": " + str(avg) + " " + units
 
+    @staticmethod
     def output_count_avg_tuple_list(id, value_type, units, tuple_list=[]):
         """
         Outputs the average value of a tuple list. This is (count / time).
@@ -140,7 +142,7 @@ class PlotTool(object):
         if count != 0:
             latest_timestamp = tuple_list[len(tuple_list) - 1][0]
             avg = float(count) / latest_timestamp
-        print id + " Average " + value_type + ": " + avg + " " + units
+        print id + " Average " + value_type + ": " + str(avg) + " " + units
 
 
 
@@ -174,34 +176,34 @@ class Grapher(object):
             # Name of link would be "link_name".
             # Buffer occupancy w.r.t time.
             plt.subplot(431)
-            PlotTool.graph_tuple_list(link_stats.buffer_occupancy)
+            PlotTool().graph_tuple_list(link_stats.buffer_occupancy)
             occpy_legend.append(link_name)
             # Output average buffer occupancy to stdout.
-            PlotTool.output_sum_avg_tuple_list(
+            PlotTool().output_sum_avg_tuple_list(
                 "Link " + link_name,
                 "Buffer Occupancy",
                 True, "(pkts)", link_stats.buffer_occupancy)
 
             # Packet loss times.
             plt.subplot(434)
-            loss_count_lst = PlotTool.gen_count_interval_list(
+            loss_count_lst = PlotTool().gen_count_interval_list(
                 link_stats.packet_loss_times)
-            PlotTool.graph_tuple_list(loss_count_lst)
+            PlotTool().graph_tuple_list(loss_count_lst)
             loss_legend.append(link_name)
             # Output average packet loss per sec to stdout.
-            PlotTool.output_count_avg_tuple_list(
+            PlotTool().output_count_avg_tuple_list(
                 "Link " + link_name,
                 "Packet Loss", "(pkts / sec)",
                 link_stats.packet_loss_times)
 
             # Packet transmission w.r.t time.
             plt.subplot(437)
-            flow_rate_list = PlotTool.gen_rate_tuple_list(
+            flow_rate_list = PlotTool().gen_rate_tuple_list(
                 link_stats.packet_transmit_times)
-            PlotTool.graph_tuple_list(flow_rate_list)
+            PlotTool().graph_tuple_list(flow_rate_list)
             trans_legend.append(link_name)
             # Output average packet transmitted per sec to stdout.
-            PlotTool.output_count_avg_tuple_list(
+            PlotTool().output_count_avg_tuple_list(
                 "Link " + link_name,
                 "Packet Transmitted", "(pkts / sec)",
                 link_stats.packet_transmit_times)
@@ -248,41 +250,41 @@ class Grapher(object):
             # Name of flow would be "flow_id".
             # Packet sent times.
             plt.subplot(432)
-            sent_rate_lst = PlotTool.gen_rate_tuple_list(
+            sent_rate_lst = PlotTool().gen_rate_tuple_list(
                 flow_stats.packet_sent_times)
-            PlotTool.graph_tuple_list(sent_rate_lst)
+            PlotTool().graph_tuple_list(sent_rate_lst)
             sent_legend.append(flow_id)
             # Output average packet sent per sec to stdout.
-            PlotTool.output_count_avg_tuple_list(
+            PlotTool().output_count_avg_tuple_list(
                 "Flow " + flow_id,
                 "Packet Sent", "(pkts / sec)",
                 flow_stats.packet_sent_times)
 
             # Packet receive times.
             plt.subplot(435)
-            rec_rate_lst = PlotTool.gen_rate_tuple_list(
+            rec_rate_lst = PlotTool().gen_rate_tuple_list(
                 flow_stats.packet_rec_times)
-            PlotTool.graph_tuple_list(rec_rate_lst)
+            PlotTool().graph_tuple_list(rec_rate_lst)
             receive_legend.append(flow_id)
             # Output average packet received per sec to stdout.
-            PlotTool.output_count_avg_tuple_list(
+            PlotTool().output_count_avg_tuple_list(
                 "Flow " + flow_id,
                 "Packet Received", "(pkts / sec)",
                 flow_stats.packet_rec_times)
 
             # Packet RTT times.
             plt.subplot(438)
-            PlotTool.graph_tuple_list(flow_stats.packet_rtts)
+            PlotTool().graph_tuple_list(flow_stats.packet_rtts)
             rtt_legend.append(flow_id)
             # Output average packet RTT to stdout.
-            PlotTool.output_sum_avg_tuple_list(
+            PlotTool().output_sum_avg_tuple_list(
                 "Flow " + flow_id,
                 "Packet RTT", True, "(sec)",
                 flow_stats.packet_rtts)
 
             # Window size in packets w.r.t time.
             plt.subplot(4,3,11)
-            PlotTool.graph_tuple_list(flow_stats.window_size_times)
+            PlotTool().graph_tuple_list(flow_stats.window_size_times)
             window_legend.append(flow_id)
 
         # Finalize sent graph.
@@ -331,24 +333,24 @@ class Grapher(object):
             # Name of host would be "address".
             # Packet sent times.
             plt.subplot(433)
-            sent_rate_lst = PlotTool.gen_rate_tuple_list(
+            sent_rate_lst = PlotTool().gen_rate_tuple_list(
                 host_stats.packet_sent_times)
-            PlotTool.graph_tuple_list(sent_rate_lst)
+            PlotTool().graph_tuple_list(sent_rate_lst)
             sent_legend.append(host_addr)
             # Output average packet received per sec to stdout.
-            PlotTool.output_count_avg_tuple_list(
+            PlotTool().output_count_avg_tuple_list(
                 "Host " + host_addr,
                 "Packet Sent", "(pkts / sec)",
                 host_stats.packet_sent_times)
 
             # Packet receive times.
             plt.subplot(436)
-            rec_rate_lst = PlotTool.gen_rate_tuple_list(
+            rec_rate_lst = PlotTool().gen_rate_tuple_list(
                 host_stats.packet_rec_times)
-            PlotTool.graph_tuple_list(rec_rate_lst)
+            PlotTool().graph_tuple_list(rec_rate_lst)
             receive_legend.append(host_addr)
             # Output average packet received per sec to stdout.
-            PlotTool.output_count_avg_tuple_list(
+            PlotTool().output_count_avg_tuple_list(
                 "Host " + host_addr,
                 "Packet Received", "(pkts / sec)",
                 host_stats.packet_rec_times)

@@ -16,8 +16,8 @@ class LinkStats(object):
 
     :ivar list buffer_occupancy: a list of (timestamp, buffer_occupancy)
     tuples.
-    :ivar list packet_loss_times: a list of timestamps, each corresponding
-    to a packet loss.
+    :ivar list packet_loss_times: a list of (timestamps, packet_size), each
+    corresponding to a packet loss.
     :ivar list packet_transmit_times: a list of (timestamp, packet_size)
     corresponding to when a packet was transmitted. packet_size is in bits.
     """
