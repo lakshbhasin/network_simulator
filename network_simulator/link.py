@@ -10,7 +10,7 @@ import numpy as np
 
 from event import Event
 from router import Router, RouterReceivedPacketEvent
-from packet import RouterPacket
+from packet import DataPacket, RouterPacket
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,17 @@ class LinkBuffer(object):
         :return: The number of Packets in the queue
         """
         return self.queue.qsize()
+
+    def get_num_data_packets(self):
+        """
+        :return: The number of DataPackets in the queue.
+        """
+        count = 0
+        for buffer_elem in self.queue.queue:
+            packet = buffer_elem.packet
+            if isinstance(packet, DataPacket):
+                count += 1
+        return count
 
     def push(self, packet, dest_dev, global_clock_sec):
         """

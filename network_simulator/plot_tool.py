@@ -265,7 +265,7 @@ class Analyzer(object):
             PlotTool.output_sum_avg_tuple_list(
                 id="Link " + link_name,
                 value_type="Buffer Occupancy",
-                count=True, units="(pkts)",
+                count=True, units="(data pkts)",
                 tuple_list=link_stats.buffer_occupancy)
 
             # Packet loss times.
@@ -297,7 +297,7 @@ class Analyzer(object):
         plt.legend(occpy_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Buffer Occupancy (pkts)")
+        plt.ylabel("Buffer Occupancy (data pkts)")
 
         # Finalize loss times graph.
         plt.subplot(4, 3, 4)

@@ -117,12 +117,13 @@ class Statistics(object):
     def link_buffer_occ_change(self, link, curr_time):
         """
         Update the buffer size as a link gains or loses a queue element.
+        Note that only DataPackets are included in this count.
 
         :param Link link: link that has a change of buffer size.
         :param float curr_time: time of occupancy change.
         """
         stats = self.get_link_stats(link)
-        buffer_occ_packets = link.link_buffer.get_num_packets()
+        buffer_occ_packets = link.link_buffer.get_num_data_packets()
         stats.buffer_occupancy.append((curr_time, buffer_occ_packets))
 
     def link_packet_loss(self, link, curr_time):
