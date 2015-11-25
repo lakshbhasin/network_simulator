@@ -45,6 +45,56 @@ class PlotTool(object):
         return output
 
     @staticmethod
+    def gen_windowed_buffer_occ_list(buffer_occupancy,
+                                     window_size=BUFFER_OCC_WINDOW_SIZE):
+        """
+        A helper function for plotting buffer occupancies with windows. This
+        function works by looking at buffer occupancy updates within a given
+        window size, and it takes the **maximum** buffer occupancy as the
+        representative occupancy for that window. If no updates were recorded
+        in that window, the previous window's buffer occupancy value is used.
+
+        :param buffer_occupancy: a list of (timestamp, buffer_occ) tuples
+        that only records **changes** in the buffer occupancy.
+        :param window_size: The window size used for computing occupancies.
+        :return: a list of (window_end_time, max_buffer_occ) tuples.
+        """
+        # The current maximum buffer occupancy in this window
+        max_buffer_occ_in_wind = 0.0
+        # The previous window's maximum buffer occupancy
+        prev_wind_max_buffer_occ = 0.0
+        # The end time of the sliding window used.
+        curr_window_end_time = window_size
+
+        windowed_buffer_occ = []
+        for tup_idx in range(len(buffer_occupancy)):
+            timestamp, this_buffer_occ = buffer_occupancy[tup_idx]
+            if timestamp > curr_window_end_time:
+                # If there were no buffer occupancy updates in this
+                # window, use the previous window's value (i.e. occupancy
+                # is unchanged).
+                if max_buffer_occ_in_wind == 0.0:
+                    max_buffer_occ_in_wind = prev_wind_max_buffer_occ
+
+                windowed_buffer_occ.append((curr_window_end_time,
+                                            max_buffer_occ_in_wind))
+
+                # Advance by a window.
+                prev_wind_max_buffer_occ = max_buffer_occ_in_wind
+                max_buffer_occ_in_wind = 0.0
+                curr_window_end_time += window_size
+            if timestamp <= curr_window_end_time:
+                max_buffer_occ_in_wind = max(max_buffer_occ_in_wind,
+                                             this_buffer_occ)
+        # Append the last elements if they did not reach an end of an
+        # interval.
+        if max_buffer_occ_in_wind != 0.0:
+            windowed_buffer_occ.append(
+                (curr_window_end_time, max_buffer_occ_in_wind))
+
+        return windowed_buffer_occ
+
+    @staticmethod
     def gen_rate_tuple_list(tuple_list):
         """
         Computes a tuple list of rates based on a (timestamp, packet_size)
@@ -77,7 +127,7 @@ class PlotTool(object):
         return output
 
     @staticmethod
-    def graph_tuple_list(tuple_list=[], scatter=False):
+    def graph_tuple_list(tuple_list, scatter=False):
         """
         Graphs the content of a tuple list.
 
@@ -204,7 +254,12 @@ class Analyzer(object):
             # Name of link would be "link_name".
             # Buffer occupancy w.r.t time.
             plt.subplot(431)
-            PlotTool.graph_tuple_list(link_stats.buffer_occupancy)
+
+            # buffer_occupancy only records changes, so we need to window it
+            # appropriately before graphing.
+            windowed_buffer_occ = PlotTool.gen_windowed_buffer_occ_list(
+                link_stats.buffer_occupancy)
+            PlotTool.graph_tuple_list(windowed_buffer_occ)
             occpy_legend.append(link_name)
             # Output average buffer occupancy to log.
             PlotTool.output_sum_avg_tuple_list(

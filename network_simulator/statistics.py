@@ -122,9 +122,6 @@ class Statistics(object):
         :param float curr_time: time of occupancy change.
         """
         stats = self.get_link_stats(link)
-        # TODO(sharon): Check with Cody if qsize() is what is want here (count
-        # number of all packets). Or do we just want to size of
-        # RoutingPackets.
         buffer_occ_packets = link.link_buffer.get_num_packets()
         stats.buffer_occupancy.append((curr_time, buffer_occ_packets))
 

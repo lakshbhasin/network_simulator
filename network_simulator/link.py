@@ -283,6 +283,8 @@ class LinkSendEvent(Event):
         # now pop
         self.buffer_elem = self.link.link_buffer.pop(
             main_event_loop.global_clock_sec)
+        statistics.link_buffer_occ_change(self.link,
+                                          main_event_loop.global_clock_sec)
 
         # update statistics only if not RouterPacket
         if not isinstance(self.buffer_elem.packet, RouterPacket):
