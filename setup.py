@@ -5,7 +5,6 @@ The structure for this package is based on info provided here:
 """
 from setuptools import setup
 
-# TODO(team): Better description needed.
 setup(name='network_simulator',
       version='0.1',
       description='CS 143 project by Laksh, Yubo, Dave, and Sharon.',

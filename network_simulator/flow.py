@@ -87,8 +87,8 @@ class Flow(object):
         self.data_size_bits = data_size_bits
         self.start_time_sec = start_time_sec
         self.max_packet_id_sent = -1  # so first ID sent is 0.
-        self.gap_retrans_packets = set()  # TODO(laksh): Check w/ Cody on this
-        self.num_timeouts_pending = dict()  # TODO(laksh): Also check w/ Cody
+        self.gap_retrans_packets = set()
+        self.num_timeouts_pending = dict()
 
     def packet_id_exceeds_data(self, packet_id):
         """
@@ -417,8 +417,6 @@ class FlowReno(Flow):
         if loss_type == PacketLossType.TIMEOUT:
             # Timeouts same as Tahoe: enter SS and update SS threshold. Also,
             # always retransmit.
-            # TODO(laksh): Does this also happen if we were in FR/FR before?
-            # Can ask Cody.
             self.ss_thresh = self.window_size_packets / 2.0
             self.window_size_packets = 1.0
             self.flow_state = FlowState.SLOW_START
@@ -856,7 +854,6 @@ class FlowReceivedAckEvent(Event):
         expected_packet_id = 0
         missing_packets = []
 
-        # TODO(team): Make more efficient based on Nov 9 meeting discussion (?)
         for i in range(len(flow_packets_received)):
             # Check precondition that list is increasing
             if i >= 1:

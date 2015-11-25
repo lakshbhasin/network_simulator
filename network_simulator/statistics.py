@@ -185,7 +185,6 @@ class Statistics(object):
         :param Flow flow: flow of action.
         :param float curr_time: simulation time of change.
         """
-        # TODO(laksh): Incorporate this into flow.py code to plot.
         stats = self.get_flow_stats(flow)
         stats.window_size_times.append((curr_time, flow.window_size_packets))
 

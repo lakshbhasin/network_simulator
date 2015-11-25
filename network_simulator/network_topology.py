@@ -292,9 +292,5 @@ class NetworkTopology(object):
             flow.dest = self.__get_host_with_addr(flow.dest_addr)
             flow.window_size_packets = INITIAL_WINDOW_SIZE_PACKETS
 
-            # TODO(team): Set up other initial params depending on the Flow's
-            # TCP algorithm (i.e. the subclass)? Could also just pass these
-            # into the JSON or have them as defaults in constructor.
-
     def __repr__(self):
         return str(self.__dict__)

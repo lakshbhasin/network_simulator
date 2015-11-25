@@ -60,7 +60,7 @@ TCP_NUM_PACKETS_AVE_FOR_RTT = 40
 """
 Default initial slow start threshold (in packets) for TCP algorithms.
 """
-TCP_INITIAL_SS_THRESH = 32.0
+TCP_INITIAL_SS_THRESH = 100.0
 
 """
 Window size in time interval for graphing in seconds.

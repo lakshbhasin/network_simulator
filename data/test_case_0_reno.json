@@ -33,7 +33,7 @@
             "flow_state": 0, 
             "num_timeouts_pending": {}, 
             "source": null, 
-            "ss_thresh": 32.0, 
+            "ss_thresh": 100.0, 
             "flow_id": "F1", 
             "dest_addr": "H2", 
             "window_size_packets": 1.0, 

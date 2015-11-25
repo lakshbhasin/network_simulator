@@ -395,9 +395,8 @@ class RouterReceivedPacketEvent(Event):
                 curr_timestamp=main_event_loop.global_clock_sec)
             if self.link is None:
                 # Drop Packet and inform statistics.
-                logger.info("Router " + self.router.address + " could not " +
-                            "route packet going to " + self.packet.dest_id)
-                # TODO(team): Need way of detecting packet loss at Router?
+                logger.debug("Router " + self.router.address + " could not " +
+                             "route packet going to " + self.packet.dest_id)
                 pass
         else:
             # Ensure RouterPacket's final destination was this Router.

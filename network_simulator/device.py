@@ -22,5 +22,3 @@ class Device(object):
 
     def __repr__(self):
         return str(self.__dict__)
-
-    # TODO(team): More event subclasses to come?
