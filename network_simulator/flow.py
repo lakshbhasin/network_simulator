@@ -609,12 +609,13 @@ class InitiateFlowEvent(Event):
                                              main_event_loop.global_clock_sec)
                 self.packets_to_send.append(new_data_packet)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedule a FlowSendPacketsEvent immediately, with the list of packets
         to send. If this is a TCP algorithm using periodic repeats,
         also schedule a PeriodicFlowInterrupt.
 
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -663,11 +664,14 @@ class PeriodicFlowInterrupt(Event):
         """
         self.old_window_size = self.flow.get_window_size()
         self.flow.handle_periodic_interrupt()
+        statistics.flow_window_size_update(
+            flow=self.flow, curr_time=main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedules a follow-up interrupt. Also schedule additional packet
         sending if needed, in case the window size has grown.
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: main loop.
         """
         periodic_interrupt = PeriodicFlowInterrupt(
@@ -736,11 +740,12 @@ class FlowSendPacketsEvent(Event):
             statistics.host_packet_sent(host=self.flow.source,
                                         packet=curr_packet)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Send DataPackets via DeviceToLinkEvent, and schedule
         FlowTimeoutPacketEvents.
 
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -786,17 +791,18 @@ class FlowTimeoutPacketEvent(Event):
         """
         Records a timeout as received, and stores the old number of pending
         timeouts (i.e. the number before this run() call).
-        :param main_event_loop: Event loop.
-        :param statistics: Statistics to update.
+        :param MainEventLoop main_event_loop: Event loop.
+        :param Statistics statistics: Statistics to update.
         """
         self.old_pending_timeouts = self.flow.record_received_timeout(
             self.packet.packet_id)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Check if a packet is in transit. If so, retransmit because it might
         be lost.
 
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -817,6 +823,8 @@ class FlowTimeoutPacketEvent(Event):
         self.flow.handle_packet_loss(self.packet.packet_id,
                                      PacketLossType.TIMEOUT,
                                      main_event_loop)
+        statistics.flow_window_size_update(
+            flow=self.flow, curr_time=main_event_loop.global_clock_sec)
 
 
 class FlowReceivedAckEvent(Event):
@@ -888,12 +896,19 @@ class FlowReceivedAckEvent(Event):
             packet=self.packet, statistics=statistics,
             curr_time=main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+        # Mark the change in window size if no packet losses occurred
+        # (otherwise, only mark the change after losses are handled).
+        if not self.packet.loss_occurred:
+            statistics.flow_window_size_update(
+                flow=self.flow, curr_time=main_event_loop.global_clock_sec)
+
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedule Flow events based on whether a Packet loss occurred (must
         trigger retransmit) or not (fill up window size as much as possible).
         Also schedule a FlowCompleteEvent if there's no more data to send.
 
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -920,6 +935,11 @@ class FlowReceivedAckEvent(Event):
                                          PacketLossType.GAP_ACK,
                                          main_event_loop)
 
+        # Only update window size after all losses handled.
+        if self.packet.loss_occurred:
+            statistics.flow_window_size_update(
+                flow=self.flow, curr_time=main_event_loop.global_clock_sec)
+
         # Even if a Packet loss occurred, we can try to schedule new Packets
         # to send (if there's a big enough window size).
         self.flow.send_packets_to_fill_window(main_event_loop)
@@ -944,8 +964,10 @@ class FlowCompleteEvent(Event):
         logger.info("Flow %s completed at time %f s.", self.flow.flow_id,
                     main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
+
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """

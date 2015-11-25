@@ -85,7 +85,7 @@ class MainEventLoop(object):
                 # Run Event and schedule new Events as usual.
                 try:
                     next_event.run(self, self.statistics)
-                    next_event.schedule_new_events(self)
+                    next_event.schedule_new_events(self, self.statistics)
                 except:
                     logger.warning("Unexpected error. Outputting Statistics...")
                     # Graph output.

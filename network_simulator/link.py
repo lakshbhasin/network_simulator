@@ -292,9 +292,10 @@ class LinkSendEvent(Event):
                 self.link,self.buffer_elem.packet,
                 main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedules new Events. This is called immediately after run().
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -348,9 +349,10 @@ class CheckLinkStatusEvent(Event):
         if self.link.link_buffer.get_num_packets() == 0:
             self.link.busy = False
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         If the buffer is not empty, then schedule a LinkSendEvent immediately.
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop.
         """
         if self.link.link_buffer.get_num_packets() != 0:
@@ -394,10 +396,11 @@ class DeviceToLinkEvent(Event):
             statistics.link_packet_loss(self.link,
                                         main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedules new LinkSendEvent iff Link was not already busy/already has
         LinkSendEvent in queue
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """

@@ -178,7 +178,7 @@ class Statistics(object):
         sent_time = ack_packet.data_packet_start_time_sec
         stats.packet_rtts.append((curr_time, curr_time - sent_time))
 
-    def flow_window_size(self, flow, curr_time):
+    def flow_window_size_update(self, flow, curr_time):
         """
         Record a change in window size from a flow.
 

@@ -58,8 +58,8 @@ class HostReceivedPacketEvent(Event):
         """
         Put packet in flow_packets_received and sort.
         Update statistics.
-        :param main_event_loop: event loop where new Events will be scheduled.
-        :param statistics: statistics to update
+        :param MainEventLoop main_event_loop: event loop
+        :param Statistics statistics: statistics to update
         """
         # add packet to host.flow_packets_received if its a DataPacket
         if isinstance(self.packet, DataPacket):
@@ -83,7 +83,7 @@ class HostReceivedPacketEvent(Event):
         statistics.host_packet_received(self.host, self.packet,
                                         main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedule FlowReceivedAckEvent.
         Populate AckPacket for selective repeat.
@@ -93,6 +93,7 @@ class HostReceivedPacketEvent(Event):
 
         AckPackets, set original data packet's start time for RTT.
         AckPacket ID same as DataPacket ID
+        :param Statistics statistics: the Statistics to update
         :param main_event_loop: schedule new Events
         """
         if isinstance(self.packet, AckPacket):
@@ -120,8 +121,7 @@ class HostReceivedPacketEvent(Event):
             dev_link_ev = DeviceToLinkEvent(a_packet, link, link.get_other_end(
                 self.host))
             main_event_loop.schedule_event_with_delay(dev_link_ev, 0.0)
-            main_event_loop.statistics.host_packet_sent(host=self.host,
-                                                        packet=a_packet)
+            statistics.host_packet_sent(host=self.host, packet=a_packet)
 
 
 def elem_in_list(elem, my_list):

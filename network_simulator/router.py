@@ -326,7 +326,7 @@ class InitiateRoutingTableUpdateEvent(Event):
         Initiates the routing table update by updating metadata and updating
         directly connected Links' costs.
         :param main_event_loop:
-        :param statistics:
+        :param Statistics statistics: the Statistics to update
         """
         # Swap out the routing tables.
         self.router.stable_routing_table = self.router.new_routing_table
@@ -342,11 +342,12 @@ class InitiateRoutingTableUpdateEvent(Event):
             global_clock_sec=main_event_loop.global_clock_sec,
             update_self_to_neighbor_dists=True)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Create a RouterPacket with the current self.router.self_to_host_dists
         (transformed appropriately) and send it down each connected Link via
         a DeviceToLinkEvent. Also, initiate another RouterReceivedPacketEvent.
+        :param Statistics statistics: the Statistics to update
         :param main_event_loop:
         """
         self.router.broadcast_router_packets(main_event_loop)
@@ -385,7 +386,7 @@ class RouterReceivedPacketEvent(Event):
         For router packets: Sanity checks, then update routing table
         synchronously.
         :param main_event_loop:
-        :param statistics:
+        :param Statistics statistics: the Statistics to update
         """
         if isinstance(self.packet, DataPacket) or \
                 isinstance(self.packet, AckPacket):
@@ -414,8 +415,10 @@ class RouterReceivedPacketEvent(Event):
                     update_self_to_neighbor_dists=False,
                     neighb_to_host_update=self.packet.router_to_host_dists)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
+
+        :param Statistics statistics: the Statistics to update
         For data/ACKs: Schedules a DeiceToLinkEvent if route was found.
         For router packets: Router sends its self_to_host_dists in the right
         format, to all of its connected Routers. But *only* if the Router's
