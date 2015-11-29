@@ -18,17 +18,20 @@ class MainEventLoop(object):
     and also keeps track of Statistics for the network.
     """
 
-    def __init__(self):
+    def __init__(self, print_links):
         """
         :ivar float global_clock_sec: global clock that advances on
         completion of Events.
         :ivar PriorityQueue events: a priority queue of (start_time_sec,
         Event) tuples, used to easily retrieve the (earliest) next Event.
         :ivar Statistics statistics: statistics for this network.
+        :ivar list print_links: the list of links to be printed. Default
+        to None if user did not input a list.
         """
         self.global_clock_sec = 0.0
         self.events = PriorityQueue()
         self.statistics = Statistics()
+        self.print_links = print_links
 
     def schedule_event_with_delay(self, event, delay_sec):
         """
@@ -99,7 +102,8 @@ class MainEventLoop(object):
         except:
             logger.warning("Unexpected error. Outputting Statistics...")
             # Output averages and graph time traces.
-            analyzer = Analyzer(self.statistics, self.global_clock_sec)
+            analyzer = Analyzer(
+                self.statistics, self.global_clock_sec, self.print_links)
             analyzer.graph_network()
             logger.info("Finished running main Event loop.")
             raise
@@ -108,6 +112,7 @@ class MainEventLoop(object):
         logger.info("Time taken: %f s.", self.global_clock_sec)
 
         # Output averages and graph time traces.
-        analyzer = Analyzer(self.statistics, self.global_clock_sec)
+        analyzer = Analyzer(
+            self.statistics, self.global_clock_sec, self.print_links)
         analyzer.graph_network()
         logger.info("Finished plotting network statistics.")

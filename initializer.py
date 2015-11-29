@@ -3,11 +3,16 @@ Main entry-point into the network simulation. Run this script with the -h
 flag to see usage.
 
 Example usage (from root directory of project):
-    python2 initializer.py -v INFO -f log/log.txt data/test_case_0.json
+    python initializer.py -v INFO -f log/log.txt data/test_case_0.json
+    -l L0 L1
 
 This will take data/test_case_0.json as the input NetworkTopology. The log
 level will be set to "INFO", with the file log/log.txt used as the log file.
+Only the statistics of L0 and L1 will be shown. This specification is used
+to reduce visual clutter (especially in Test Cases 1-2).
+
 In order to log to stdout, just leave out the optional -f parameter.
+Leaving out the -l parameter prints out all available links.
 """
 
 import argparse
@@ -34,6 +39,8 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--log_file", type=str, default="stdout",
                         help="Log file",
                         metavar='')
+    parser.add_argument("-l", "--print_links", type=str, default=None,
+                        nargs="*", help="Links to be printed")
     parser.add_argument("topology_json", type=str,
                         help="JSON file containing the NetworkTopology")
     args = parser.parse_args()
@@ -66,7 +73,7 @@ if __name__ == "__main__":
     topology = NetworkTopology.init_from_json_file(topology_json)
 
     # Set up event loop and statistics, and register initial Events
-    event_loop = MainEventLoop()
+    event_loop = MainEventLoop(args.print_links)
 
     # if routers not None, schedule events immediately
     if topology.routers is not None:

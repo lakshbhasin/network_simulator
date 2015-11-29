@@ -178,14 +178,17 @@ class Analyzer(object):
     Graphs statistics items from Statistics class and logs averages of data
     for each network device.
     """
-    def __init__(self, stats, simulation_time):
+    def __init__(self, stats, simulation_time, print_links):
         """
         :ivar Statistics stats: input Statistics object for graphing.
         :ivar float simulation_time: the amount of time (in seconds) for
         which the simulation has run. Used to bound axes properly.
+        :ivar list print_links: the links to be printed; if the user did
+        not specify this list, the variable is None.
         """
         self.stats = stats
         self.simulation_time = simulation_time
+        self.print_links = print_links
 
     def graph_links(self):
         """
@@ -204,11 +207,11 @@ class Analyzer(object):
 
         # Iterate through each link to display each stats.
         for link_name, link_stats in sorted(self.stats.link_stats.iteritems()):
-            # Skip any Links for which we don't want to calculate stats.
-            if LINKS_TO_CALC_STATS is not None and \
-                    link_name not in LINKS_TO_CALC_STATS:
-                continue
-
+            # If there is a valid link list to be printed and the current link
+            # is not included, skip it.
+            if self.print_links:
+                if link_name not in self.print_links:
+                    continue
             # Name of link would be "link_name".
             # Buffer occupancy w.r.t time.
             plt.subplot(4, 3, 1)
