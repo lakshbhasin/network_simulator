@@ -13,31 +13,24 @@ Download the "Community" version here:
 https://www.jetbrains.com/pycharm/download/
 ```
 
-Installation instruction:
-```
-https://www.jetbrains.com/pycharm/download/installation_instructions.jsp?os=linux
-```
-
-
 Dependencies
 ===
 To use the package network_simulator, the following dependencies need to
-be installed.
+be installed (via pip for Python 2).
 
-- setuptools:
-```
-https://pypi.python.org/pypi/setuptools#unix-wget
-```
+- jsonpickle
+- numpy
 
 Usage
 ===
-TODO(team): Modify this once the other wrapper programs are completed.
-We can use setup.py later.
-
-Currently, to use our classes, do:
+Run initializer.py (or read the file) to see example usage. One method of
+example usage is included below:
 ```
-python
-from network_simulator import *
+python2 initializer.py -v INFO -f stdout data/test_case_0_fast.json
 ```
 
-And we can start using the classes right away.
+This will run the simulator with verbosity level "INFO", and output any logs
+directly to stdout (alternatively, a file can be specified as part of the
+"-f" optional parameter). The JSON file "data/test_case_0_fast.json" wraps a
+NetworkTopology that describes Test Case 0 with TCP FAST used for Flows. See
+the other JSON files in the data/ folder for more options.

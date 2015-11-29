@@ -3,7 +3,7 @@ Main entry-point into the network simulation. Run this script with the -h
 flag to see usage.
 
 Example usage (from root directory of project):
-    python initializer.py -v INFO -f log/log.txt data/test_case_0.json
+    python2 initializer.py -v INFO -f log/log.txt data/test_case_0.json
 
 This will take data/test_case_0.json as the input NetworkTopology. The log
 level will be set to "INFO", with the file log/log.txt used as the log file.

@@ -33,8 +33,7 @@ MEGABYTE = 1024 * KILOBYTE
 MEGABIT = 128 * KILOBYTE
 
 """Flow's packet timeout limit in seconds."""
-# TODO(team): What should this number be?
-FLOW_TIMEOUT_SEC = 1
+FLOW_TIMEOUT_SEC = 0.5
 
 """
 TCP FAST window update smoothing parameter "gamma" (see
