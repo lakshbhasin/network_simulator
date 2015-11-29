@@ -45,56 +45,6 @@ class PlotTool(object):
         return output
 
     @staticmethod
-    def gen_windowed_buffer_occ_list(buffer_occupancy,
-                                     window_size=BUFFER_OCC_WINDOW_SIZE):
-        """
-        A helper function for plotting buffer occupancies with windows. This
-        function works by looking at buffer occupancy updates within a given
-        window size, and it takes the **maximum** buffer occupancy as the
-        representative occupancy for that window. If no updates were recorded
-        in that window, the previous window's buffer occupancy value is used.
-
-        :param buffer_occupancy: a list of (timestamp, buffer_occ) tuples
-        that only records **changes** in the buffer occupancy.
-        :param window_size: The window size used for computing occupancies.
-        :return: a list of (window_end_time, max_buffer_occ) tuples.
-        """
-        # The current maximum buffer occupancy in this window
-        max_buffer_occ_in_wind = 0.0
-        # The previous window's maximum buffer occupancy
-        prev_wind_max_buffer_occ = 0.0
-        # The end time of the sliding window used.
-        curr_window_end_time = window_size
-
-        windowed_buffer_occ = []
-        for tup_idx in range(len(buffer_occupancy)):
-            timestamp, this_buffer_occ = buffer_occupancy[tup_idx]
-            if timestamp > curr_window_end_time:
-                # If there were no buffer occupancy updates in this
-                # window, use the previous window's value (i.e. occupancy
-                # is unchanged).
-                if max_buffer_occ_in_wind == 0.0:
-                    max_buffer_occ_in_wind = prev_wind_max_buffer_occ
-
-                windowed_buffer_occ.append((curr_window_end_time,
-                                            max_buffer_occ_in_wind))
-
-                # Advance by a window.
-                prev_wind_max_buffer_occ = max_buffer_occ_in_wind
-                max_buffer_occ_in_wind = 0.0
-                curr_window_end_time += window_size
-            if timestamp <= curr_window_end_time:
-                max_buffer_occ_in_wind = max(max_buffer_occ_in_wind,
-                                             this_buffer_occ)
-        # Append the last elements if they did not reach an end of an
-        # interval.
-        if max_buffer_occ_in_wind != 0.0:
-            windowed_buffer_occ.append(
-                (curr_window_end_time, max_buffer_occ_in_wind))
-
-        return windowed_buffer_occ
-
-    @staticmethod
     def gen_rate_tuple_list(tuple_list):
         """
         Computes a tuple list of rates based on a (timestamp, packet_size)
@@ -228,11 +178,14 @@ class Analyzer(object):
     Graphs statistics items from Statistics class and logs averages of data
     for each network device.
     """
-    def __init__(self, stats):
+    def __init__(self, stats, simulation_time):
         """
         :ivar Statistics stats: input Statistics object for graphing.
+        :ivar float simulation_time: the amount of time (in seconds) for
+        which the simulation has run. Used to bound axes properly.
         """
         self.stats = stats
+        self.simulation_time = simulation_time
 
     def graph_links(self):
         """
@@ -251,15 +204,16 @@ class Analyzer(object):
 
         # Iterate through each link to display each stats.
         for link_name, link_stats in sorted(self.stats.link_stats.iteritems()):
+            # Skip any Links for which we don't want to calculate stats.
+            if LINKS_TO_CALC_STATS is not None and \
+                    link_name not in LINKS_TO_CALC_STATS:
+                continue
+
             # Name of link would be "link_name".
             # Buffer occupancy w.r.t time.
             plt.subplot(4, 3, 1)
 
-            # buffer_occupancy only records changes, so we need to window it
-            # appropriately before graphing.
-            windowed_buffer_occ = PlotTool.gen_windowed_buffer_occ_list(
-                link_stats.buffer_occupancy)
-            PlotTool.graph_tuple_list(windowed_buffer_occ)
+            PlotTool.graph_tuple_list(link_stats.buffer_occupancy)
             occpy_legend.append(link_name)
             # Output average buffer occupancy to log.
             PlotTool.output_sum_avg_tuple_list(
@@ -297,6 +251,7 @@ class Analyzer(object):
         plt.legend(occpy_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Buffer Occupancy (data pkts)")
 
         # Finalize loss times graph.
@@ -304,6 +259,7 @@ class Analyzer(object):
         plt.legend(loss_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Packet Losses")
 
         # Finalize packet transmission graph.
@@ -311,6 +267,7 @@ class Analyzer(object):
         plt.legend(trans_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Transmission Rate (Mbps)")
 
     def graph_flows(self):
@@ -381,6 +338,7 @@ class Analyzer(object):
         plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Flow Receive Rate (Mbps)")
 
         # Finalize sent graph.
@@ -388,6 +346,7 @@ class Analyzer(object):
         plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Flow send rate (Mbps)")
 
         # Finalize window size graph.
@@ -395,6 +354,7 @@ class Analyzer(object):
         plt.legend(window_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Window Size (pkts)")
 
         # Finalize RTT graph.
@@ -402,6 +362,7 @@ class Analyzer(object):
         plt.legend(rtt_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("RTT (sec)")
 
     def graph_hosts(self):
@@ -449,6 +410,7 @@ class Analyzer(object):
         plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Host Send Rate (Mbps)")
 
         # Finalize receive graph.
@@ -456,6 +418,7 @@ class Analyzer(object):
         plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Host Receive Rate (Mbps)")
 
     def graph_network(self):

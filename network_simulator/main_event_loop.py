@@ -65,48 +65,49 @@ class MainEventLoop(object):
         # Keep picking next Event by time from the PriorityQueue, run it,
         # and schedule new Events, until the total number of flows has been
         # reached.
-        while len(incomplete_flow_ids) > 0:
-            next_event_start_time, next_event = self.events.get_nowait()
+        try:
+            while len(incomplete_flow_ids) > 0:
+                next_event_start_time, next_event = self.events.get_nowait()
 
-            # Ensure not travelling backwards in time.
-            if next_event_start_time < self.global_clock_sec:
-                raise ValueError("Next event starts at "
-                                 + next_event_start_time + " s, which is "
-                                 + "before " + self.global_clock_sec + " s.")
+                # Ensure not travelling backwards in time.
+                if next_event_start_time < self.global_clock_sec:
+                    raise ValueError("Next event starts at "
+                                     + next_event_start_time + " s, which is "
+                                     + "before " + self.global_clock_sec
+                                     + " s.")
 
-            self.global_clock_sec = next_event_start_time
+                self.global_clock_sec = next_event_start_time
 
-            # Do not handle periodic interrupts for Flows that are done.
-            if isinstance(next_event, PeriodicFlowInterrupt) \
-                    and next_event.flow.flow_id not in incomplete_flow_ids:
-                logger.info("Stopped handling PeriodicFlowInterrupts for "
-                            "completed Flow %s", next_event.flow.flow_id)
-            else:
-                # Run Event and schedule new Events as usual.
-                try:
+                # Do not handle periodic interrupts for Flows that are done.
+                if isinstance(next_event, PeriodicFlowInterrupt) \
+                        and next_event.flow.flow_id not in incomplete_flow_ids:
+                    logger.info("Stopped handling PeriodicFlowInterrupts for "
+                                "completed Flow %s", next_event.flow.flow_id)
+                else:
+                    # Run Event and schedule new Events as usual.
                     next_event.run(self, self.statistics)
                     next_event.schedule_new_events(self, self.statistics)
-                except:
-                    logger.warning("Unexpected error. Outputting Statistics...")
-                    # Graph output.
-                    analyzer = Analyzer(self.statistics)
-                    analyzer.graph_network()
-                    logger.info("Finished running main Event loop.")
-                    raise
 
-            if isinstance(next_event, FlowCompleteEvent):
-                incomplete_flow_ids.remove(next_event.flow.flow_id)
+                if isinstance(next_event, FlowCompleteEvent):
+                    incomplete_flow_ids.remove(next_event.flow.flow_id)
 
-            if self.global_clock_sec - prev_print_clock_sec > \
-                    print_threshold_sec:
-                logger.info("Finished processing Events through %f sec",
-                            self.global_clock_sec)
-                prev_print_clock_sec = self.global_clock_sec
+                if self.global_clock_sec - prev_print_clock_sec > \
+                        print_threshold_sec:
+                    logger.info("Finished processing Events through %f sec",
+                                self.global_clock_sec)
+                    prev_print_clock_sec = self.global_clock_sec
+        except:
+            logger.warning("Unexpected error. Outputting Statistics...")
+            # Output averages and graph time traces.
+            analyzer = Analyzer(self.statistics, self.global_clock_sec)
+            analyzer.graph_network()
+            logger.info("Finished running main Event loop.")
+            raise
 
         logger.info("Finished running main Event loop.")
         logger.info("Time taken: %f s.", self.global_clock_sec)
 
-        # Graph output.
-        analyzer = Analyzer(self.statistics)
+        # Output averages and graph time traces.
+        analyzer = Analyzer(self.statistics, self.global_clock_sec)
         analyzer.graph_network()
         logger.info("Finished plotting network statistics.")
