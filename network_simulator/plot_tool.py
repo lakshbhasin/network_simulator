@@ -32,7 +32,7 @@ class PlotTool(object):
         output = []
         for idx in range(len(lst)):
             timestamp = lst[idx]
-            if timestamp > curr_window_end_time:
+            while timestamp > curr_window_end_time:
                 output.append((curr_window_end_time, curr_window_count))
                 curr_window_count = 0
                 curr_window_end_time += GRAPH_WINDOW_SIZE
@@ -230,7 +230,8 @@ class Analyzer(object):
             loss_count_lst = PlotTool.gen_count_interval_list(
                 link_stats.packet_loss_times)
             PlotTool.graph_tuple_list(loss_count_lst)
-            loss_legend.append(link_name)
+            if loss_count_lst:
+                loss_legend.append(link_name)
             # Output average packet loss per sec to log.
             PlotTool.output_count_avg_list(
                 id="Link " + link_name,
