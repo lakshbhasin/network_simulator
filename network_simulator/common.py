@@ -67,12 +67,6 @@ Window size in time interval for graphing in seconds.
 GRAPH_WINDOW_SIZE = 0.10
 
 """
-If non-None, this is a list of the Links for which we want to see stats. This
-is used to reduce visual clutter (especially in Test Cases 1-2).
-"""
-LINKS_TO_CALC_STATS = None
-
-"""
 Buffer occupancies use a different window size (in seconds) for their graph
 since they change more often.
 """
