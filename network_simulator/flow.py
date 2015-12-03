@@ -5,15 +5,15 @@ TCP algorithms), and Flow-related Events.
 
 from abc import ABCMeta, abstractmethod
 import copy
-from Queue import PriorityQueue
+import logging
+from Queue import Queue
 
 import numpy as np
 
 from common import *
-from event import *
-from link import *
-from main_event_loop import *
-from packet import *
+from event import Event
+from link import DeviceToLinkEvent
+from packet import AckPacket, DataPacket
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +47,8 @@ class Flow(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, flow_id=None, source_addr=None, dest_addr=None,
-                 source=None, dest=None,
-                 window_size_packets=INITIAL_WINDOW_SIZE_PACKETS,
-                 data_size_bits=None, start_time_sec=None):
+    def __init__(self, flow_id, source_addr, dest_addr,
+                 data_size_bits, start_time_sec):
         """
         :ivar string flow_id: unique string ID for this Flow.
         :ivar string source_addr: address of source Host.
@@ -63,9 +61,6 @@ class Flow(object):
         currently in transit, or *scheduled* to be in transit.
         :ivar list packet_rtts: list of (packet_id, rtt) tuples that stores
         the RTT for each Packet that completed a round trip.
-        :ivar Queue<int> packet_id_buffer: a FIFO Queue of Packet IDs that are
-        buffered up to send, but have *not* yet been sent because the window
-        size is too small. Useful for when losses occur but window size small.
         :ivar int data_size_bits: total amount of data to transmit in bits.
         Assumed to be a multiple of the DataPacket size.
         :ivar float start_time_sec: start time relative to global clock.
@@ -84,17 +79,16 @@ class Flow(object):
         self.flow_id = flow_id
         self.source_addr = source_addr
         self.dest_addr = dest_addr
-        self.source = source
-        self.dest = dest
-        self.window_size_packets = float(window_size_packets)
+        self.source = None  # initialized later in network_topology.py
+        self.dest = None  # initialized later in network_topology.py
+        self.window_size_packets = float(INITIAL_WINDOW_SIZE_PACKETS)
         self.packets_in_transit = set()
         self.packet_rtts = list()
         self.data_size_bits = data_size_bits
         self.start_time_sec = start_time_sec
-        self.packet_id_buffer = Queue()
         self.max_packet_id_sent = -1  # so first ID sent is 0.
-        self.gap_retrans_packets = set()  # TODO(laksh): Check w/ Cody on this
-        self.num_timeouts_pending = dict()  # TODO(laksh): Also check w/ Cody
+        self.gap_retrans_packets = set()
+        self.num_timeouts_pending = dict()
 
     def packet_id_exceeds_data(self, packet_id):
         """
@@ -113,24 +107,17 @@ class Flow(object):
 
     def get_next_data_packet_id(self, peek=False):
         """
-        Helper function to get the next DataPacket ID to *send*. This works by:
-            1) Taking the head element in the packet ID buffer. Or...
-            2) Taking max_packet_id_sent + 1
+        Helper function to get the next DataPacket ID to *send*.
 
         :param bool peek: If True, none of the internal metadata of the Flow
-        (e.g. self.packet_id_buffer or self.max_packet_id_sent) is updated.
+        (e.g. self.max_packet_id_sent) is updated.
         :return: int (next DataPacket's ID)
         """
-        if not self.packet_id_buffer.empty():
-            if not peek:
-                next_packet_id = self.packet_id_buffer.get_nowait()
-            else:
-                # Peek at next Queue element without updating buffer.
-                next_packet_id = self.packet_id_buffer.queue[0]
-        else:
-            next_packet_id = self.max_packet_id_sent + 1
+        next_packet_id = self.max_packet_id_sent + 1
 
-        if not peek:
+        # Only update the max packet ID sent if the new Packet ID doesn't
+        # exceed the data size (and we're not peeking).
+        if not peek and not self.packet_id_exceeds_data(next_packet_id):
             self.max_packet_id_sent = max(self.max_packet_id_sent,
                                           next_packet_id)
 
@@ -147,14 +134,17 @@ class Flow(object):
     def record_received_timeout(self, packet_id):
         """
         Records that a timeout was received for the given Packet, and returns
-        the old number of pending timeouts.
+        the old number of pending timeouts. If no timeouts were pending,
+        0 is returned.
         :param int packet_id: ID of Packet received.
         :return: The old number of pending timeouts (int), before this call.
         """
-        assert packet_id in self.num_timeouts_pending
-        old_pending_timeouts = self.num_timeouts_pending[packet_id]
-        self.num_timeouts_pending[packet_id] -= 1
-        return old_pending_timeouts
+        if packet_id not in self.num_timeouts_pending:
+            return 0
+        else:
+            old_pending_timeouts = self.num_timeouts_pending[packet_id]
+            self.num_timeouts_pending[packet_id] -= 1
+            return old_pending_timeouts
 
     @abstractmethod
     def handle_packet_loss(self, packet_id, loss_type, main_event_loop):
@@ -175,7 +165,7 @@ class Flow(object):
         :param MainEventLoop main_event_loop: main Event loop for further
         Event scheduling.
         """
-        logger.debug("Flow %s lost packet %d due via PacketLossType %d",
+        logger.debug("Flow %s lost packet %d via PacketLossType %d",
                      self.flow_id, packet_id, loss_type)
 
     @abstractmethod
@@ -212,38 +202,23 @@ class Flow(object):
         statistics.flow_packet_received(flow=self, ack_packet=packet,
                                         curr_time=curr_time)
 
-    def retransmit_if_possible(self, packet_id, main_event_loop):
+    def retransmit(self, packet_id, main_event_loop):
         """
-        Attempts to retransmit the given Packet by scheduling a
-        FlowSendPacketsEvent. This will only be done, however, when there's
-        enough space in the window. Otherwise, the ID is added to a buffer.
+        Retransmits the given Packet by scheduling a FlowSendPacketsEvent.
+        This will only be done if the Packet is already currently in transit
+        (otherwise retransmitting makes no sense).
         :param int packet_id: ID of Packet to retransmit.
         :param MainEventLoop main_event_loop: event loop.
-        :return True if we were able to immediately schedule a retransmit.
         """
-        # TODO(laksh): Could add ID to gap_retrans_packets *here*, if this
-        # retransmission is due to a gap. Might be cleaner.
-
-        # Get size of packets_in_transit if we were to add this Packet.
-        packets_in_transit_copy = copy.copy(self.packets_in_transit)
-        packets_in_transit_copy.add(packet_id)
-
-        if len(packets_in_transit_copy) > int(self.window_size_packets):
-            logger.debug("Flow %s could not retransmit packet %d since its "
-                         "window size was too small. Will add packet to "
-                         "buffer.")
-            self.packet_id_buffer.put_nowait(packet_id)
-            return False
-        else:
-            this_packet = DataPacket(
-                packet_id=packet_id, flow_id=self.flow_id,
-                source_id=self.source_addr, dest_id=self.dest_addr,
-                start_time_sec=main_event_loop.global_clock_sec)
-            flow_send_event = FlowSendPacketsEvent(self, [this_packet])
-            main_event_loop.schedule_event_with_delay(flow_send_event, 0.0)
-            logger.debug("Flow %s successfully scheduled a retransmit of "
-                         "packet %d.")
-            return True
+        assert packet_id in self.packets_in_transit
+        this_packet = DataPacket(
+            packet_id=packet_id, flow_id=self.flow_id,
+            source_id=self.source_addr, dest_id=self.dest_addr,
+            start_time_sec=main_event_loop.global_clock_sec)
+        flow_send_event = FlowSendPacketsEvent(self, [this_packet])
+        main_event_loop.schedule_event_with_delay(flow_send_event, 0.0)
+        logger.debug("Flow %s successfully scheduled a retransmit of "
+                     "packet %d.", self.flow_id, packet_id)
 
     def send_packets_to_fill_window(self, main_event_loop):
         """
@@ -287,14 +262,11 @@ class FlowDummy(Flow):
     size. Losses result in retransmits.
     """
 
-    def __init__(self, flow_id=None, source_addr=None, dest_addr=None,
-                 source=None, dest=None,
-                 data_size_bits=None, start_time_sec=None):
+    def __init__(self, flow_id, source_addr, dest_addr,
+                 data_size_bits, start_time_sec):
         super(FlowDummy, self).__init__(flow_id=flow_id,
                                         source_addr=source_addr,
-                                        dest_addr=dest_addr, source=source,
-                                        dest=dest,
-                                        window_size_packets=1,
+                                        dest_addr=dest_addr,
                                         data_size_bits=data_size_bits,
                                         start_time_sec=start_time_sec)
 
@@ -321,7 +293,7 @@ class FlowDummy(Flow):
         if loss_type == PacketLossType.GAP_ACK:
             self.gap_retrans_packets.add(packet_id)
 
-        self.retransmit_if_possible(packet_id, main_event_loop)
+        self.retransmit(packet_id, main_event_loop)
 
 
 class FlowReno(Flow):
@@ -341,10 +313,8 @@ class FlowReno(Flow):
     """
     ACK_GAPS_FR_FR = 3
 
-    def __init__(self, flow_id=None, source_addr=None, dest_addr=None,
-                 source=None, dest=None,
-                 window_size_packets=INITIAL_WINDOW_SIZE_PACKETS,
-                 data_size_bits=None, start_time_sec=None,
+    def __init__(self, flow_id, source_addr, dest_addr,
+                 data_size_bits, start_time_sec,
                  initial_ss_thresh=TCP_INITIAL_SS_THRESH):
         """
         Additional ivars (not in Flow):
@@ -361,9 +331,7 @@ class FlowReno(Flow):
         received.
         """
         super(FlowReno, self).__init__(flow_id=flow_id, source_addr=source_addr,
-                                       dest_addr=dest_addr, source=source,
-                                       dest=dest,
-                                       window_size_packets=window_size_packets,
+                                       dest_addr=dest_addr,
                                        data_size_bits=data_size_bits,
                                        start_time_sec=start_time_sec)
         assert initial_ss_thresh > 0
@@ -418,8 +386,8 @@ class FlowReno(Flow):
         super(FlowReno, self).handle_packet_success(packet, statistics,
                                                     curr_time)
 
-        logger.debug("ACK for Packet %d received. Initial flow state: %d",
-                     packet.packet_id, self.flow_state)
+        # logger.debug("ACK for Packet %d received. Initial flow state: %d",
+        #              packet.packet_id, self.flow_state)
 
         if packet.packet_id in self.packet_id_to_ack_gaps:
             del self.packet_id_to_ack_gaps[packet.packet_id]
@@ -430,9 +398,9 @@ class FlowReno(Flow):
         if not packet.loss_occurred:
             self.update_window_size_and_state()
 
-        logger.debug("Old window size: %f. New window size: %f.",
-                     old_window_size, self.window_size_packets)
-        logger.debug("New flow state: %d.", self.flow_state)
+        # logger.debug("Old window size: %f. New window size: %f.",
+        #              old_window_size, self.window_size_packets)
+        # logger.debug("New flow state: %d.", self.flow_state)
 
     def handle_packet_loss(self, packet_id, loss_type, main_event_loop):
         """
@@ -449,12 +417,10 @@ class FlowReno(Flow):
         if loss_type == PacketLossType.TIMEOUT:
             # Timeouts same as Tahoe: enter SS and update SS threshold. Also,
             # always retransmit.
-            # TODO(laksh): Does this also happen if we were in FR/FR before?
-            # Can ask Cody.
             self.ss_thresh = self.window_size_packets / 2.0
             self.window_size_packets = 1.0
             self.flow_state = FlowState.SLOW_START
-            self.retransmit_if_possible(packet_id, main_event_loop)
+            self.retransmit(packet_id, main_event_loop)
 
             logger.debug("Entered SS due to timeout. New ss_thresh: %f. New "
                          "window size: %f.", self.ss_thresh,
@@ -462,7 +428,7 @@ class FlowReno(Flow):
         elif loss_type == PacketLossType.GAP_ACK:
             # Update the packet_id_to_ack_gaps map and enter FR/FR if needed.
             num_ack_gaps = \
-                self.packet_id_to_ack_gaps.get(packet_id, default=0) + 1
+                self.packet_id_to_ack_gaps.get(packet_id, 0) + 1
             self.packet_id_to_ack_gaps[packet_id] = num_ack_gaps
 
             # Do not redo the conditions that lead to FR/FR if we've already
@@ -478,17 +444,18 @@ class FlowReno(Flow):
 
                 # Fast retransmit before changing window size.
                 self.gap_retrans_packets.add(packet_id)
-                self.retransmit_if_possible(packet_id, main_event_loop)
+                self.retransmit(packet_id, main_event_loop)
                 self.window_size_packets = self.ss_thresh + num_ack_gaps
 
                 logger.debug("Entered FR/FR. SS thresh: %f. Window size: %f.",
                              self.ss_thresh, self.window_size_packets)
             else:
                 # Do not do anything to update window size in this case.
-                logger.debug("Did not enter FR/FR after ACK gap. Number of "
-                             "ACK gaps for packet was %d. Packet already "
-                             "retransmitted: %r.", num_ack_gaps,
-                             packet_id in self.gap_retrans_packets)
+                # logger.debug("Did not enter FR/FR after ACK gap. Number of "
+                #              "ACK gaps for packet was %d. Packet already "
+                #              "retransmitted: %r.", num_ack_gaps,
+                #              packet_id in self.gap_retrans_packets)
+                pass
 
 
 class FlowFast(Flow):
@@ -501,10 +468,8 @@ class FlowFast(Flow):
     for more details.
     """
 
-    def __init__(self, flow_id=None, source_addr=None, dest_addr=None,
-                 source=None, dest=None,
-                 window_size_packets=INITIAL_WINDOW_SIZE_PACKETS,
-                 data_size_bits=None, start_time_sec=None,
+    def __init__(self, flow_id, source_addr, dest_addr,
+                 data_size_bits, start_time_sec,
                  alpha=TCP_FAST_DEFAULT_ALPHA, gamma=TCP_FAST_DEFAULT_GAMMA,
                  num_packets_ave_for_rtt=TCP_NUM_PACKETS_AVE_FOR_RTT):
         """
@@ -517,9 +482,7 @@ class FlowFast(Flow):
         average in computing the average RTT.
         """
         super(FlowFast, self).__init__(flow_id=flow_id, source_addr=source_addr,
-                                       dest_addr=dest_addr, source=source,
-                                       dest=dest,
-                                       window_size_packets=window_size_packets,
+                                       dest_addr=dest_addr,
                                        data_size_bits=data_size_bits,
                                        start_time_sec=start_time_sec)
         self.alpha = alpha
@@ -558,18 +521,20 @@ class FlowFast(Flow):
 
         if loss_type == PacketLossType.TIMEOUT:
             # Always retransmit if possible in case of timeouts.
-            self.retransmit_if_possible(packet_id, main_event_loop)
+            logger.debug("Flow %s retransmitting packet %d due to timeout.",
+                         self.flow_id, packet_id)
+            self.retransmit(packet_id, main_event_loop)
         elif loss_type == PacketLossType.GAP_ACK:
             # Check if Packet ID has been retransmitted due to GAP_ACK before.
             if packet_id not in self.gap_retrans_packets:
                 logger.debug("Flow %s attempted to retransmit packet %d due to "
-                             "GAP_ACK.")
-                self.retransmit_if_possible(packet_id, main_event_loop)
+                             "GAP_ACK.", self.flow_id, packet_id)
+                self.retransmit(packet_id, main_event_loop)
                 self.gap_retrans_packets.add(packet_id)
             else:
                 logger.debug("Flow %s did not attempt to retransmit packet %d "
                              "since it had already been retransmitted due to "
-                             "GAP_ACK before.")
+                             "GAP_ACK before.", self.flow_id, packet_id)
 
     def handle_periodic_interrupt(self):
         """
@@ -598,9 +563,9 @@ class FlowFast(Flow):
                                               self.alpha))
         self.window_size_packets = new_window_size
 
-        logger.debug("Flow %s updated window size from %f pkts to %f pkts "
-                     "during periodic TCP FAST update.", self.flow_id,
-                     old_window_size, new_window_size)
+        # logger.debug("Flow %s updated window size from %f pkts to %f pkts "
+        #              "during periodic TCP FAST update.", self.flow_id,
+        #              old_window_size, new_window_size)
 
 
 class InitiateFlowEvent(Event):
@@ -642,12 +607,13 @@ class InitiateFlowEvent(Event):
                                              main_event_loop.global_clock_sec)
                 self.packets_to_send.append(new_data_packet)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedule a FlowSendPacketsEvent immediately, with the list of packets
         to send. If this is a TCP algorithm using periodic repeats,
         also schedule a PeriodicFlowInterrupt.
 
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -669,6 +635,10 @@ class PeriodicFlowInterrupt(Event):
     internal parameters. Currently, this is only used with TCP FAST. The
     Flows that can handle periodic interrupts should implement a
     handle_periodic_interrupt() function.
+
+    This Event will always call itself again and again once it is done
+    running; it is up to the MainEventLoop to stop the interrupts when the
+    Flow is complete.
     """
 
     def __init__(self, flow, time_period_sec):
@@ -692,11 +662,14 @@ class PeriodicFlowInterrupt(Event):
         """
         self.old_window_size = self.flow.get_window_size()
         self.flow.handle_periodic_interrupt()
+        statistics.flow_window_size_update(
+            flow=self.flow, curr_time=main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedules a follow-up interrupt. Also schedule additional packet
         sending if needed, in case the window size has grown.
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: main loop.
         """
         periodic_interrupt = PeriodicFlowInterrupt(
@@ -730,17 +703,28 @@ class FlowSendPacketsEvent(Event):
         self.flow = flow
         self.packets_to_send = packets_to_send
 
+        # Keep track of the packets that are being sent but aren't already in
+        # transit.
+        new_packets_to_send = 0
+
         # We want packets_in_transit to reflect Packets that are scheduled to
         # be sent as well, to avoid race conditions.
         for curr_packet in self.packets_to_send:
+            if curr_packet.packet_id not in self.flow.packets_in_transit:
+                new_packets_to_send += 1
             self.flow.packets_in_transit.add(curr_packet.packet_id)
 
-        # Sanity check that packets_in_transit is not too big now.
-        if len(self.flow.packets_in_transit) > int(self.flow.get_window_size()):
-            # This should never happen since we have a Packet ID buffer in
-            # place.
+        # Sanity check that packets_in_transit is not too big now. This
+        # happens when new packet(s) is/are sent, AND the window size gets
+        # exceeded.
+        if new_packets_to_send != 0 and \
+                len(self.flow.packets_in_transit) > \
+                int(self.flow.get_window_size()):
+            # This should never happen if timeouts and filling window sizes
+            # are being handled properly.
             raise ValueError("The size of packets in transit + scheduled "
-                             "is greater than the Flow's window size")
+                             "is greater than the Flow's window size, "
+                             "after new Packets were scheduled to send.")
 
     def run(self, main_event_loop, statistics):
         """
@@ -754,11 +738,12 @@ class FlowSendPacketsEvent(Event):
             statistics.host_packet_sent(host=self.flow.source,
                                         packet=curr_packet)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Send DataPackets via DeviceToLinkEvent, and schedule
         FlowTimeoutPacketEvents.
 
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -804,17 +789,18 @@ class FlowTimeoutPacketEvent(Event):
         """
         Records a timeout as received, and stores the old number of pending
         timeouts (i.e. the number before this run() call).
-        :param main_event_loop: Event loop.
-        :param statistics: Statistics to update.
+        :param MainEventLoop main_event_loop: Event loop.
+        :param Statistics statistics: Statistics to update.
         """
         self.old_pending_timeouts = self.flow.record_received_timeout(
             self.packet.packet_id)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Check if a packet is in transit. If so, retransmit because it might
         be lost.
 
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -835,6 +821,8 @@ class FlowTimeoutPacketEvent(Event):
         self.flow.handle_packet_loss(self.packet.packet_id,
                                      PacketLossType.TIMEOUT,
                                      main_event_loop)
+        statistics.flow_window_size_update(
+            flow=self.flow, curr_time=main_event_loop.global_clock_sec)
 
 
 class FlowReceivedAckEvent(Event):
@@ -866,7 +854,6 @@ class FlowReceivedAckEvent(Event):
         expected_packet_id = 0
         missing_packets = []
 
-        # TODO(team): Make more efficient based on Nov 9 meeting discussion (?)
         for i in range(len(flow_packets_received)):
             # Check precondition that list is increasing
             if i >= 1:
@@ -906,12 +893,19 @@ class FlowReceivedAckEvent(Event):
             packet=self.packet, statistics=statistics,
             curr_time=main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+        # Mark the change in window size if no packet losses occurred
+        # (otherwise, only mark the change after losses are handled).
+        if not self.packet.loss_occurred:
+            statistics.flow_window_size_update(
+                flow=self.flow, curr_time=main_event_loop.global_clock_sec)
+
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedule Flow events based on whether a Packet loss occurred (must
         trigger retransmit) or not (fill up window size as much as possible).
         Also schedule a FlowCompleteEvent if there's no more data to send.
 
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -933,9 +927,15 @@ class FlowReceivedAckEvent(Event):
         # window size and schedule new FlowSendPacketsEvents in its
         # specialized way. NOTE: assuming all losses are gaps.
         for packet_id in self.lost_packet_ids:
+            # logger.debug("Lost packets: %s", self.lost_packet_ids)
             self.flow.handle_packet_loss(packet_id,
                                          PacketLossType.GAP_ACK,
                                          main_event_loop)
+
+        # Only update window size after all losses handled.
+        if self.packet.loss_occurred:
+            statistics.flow_window_size_update(
+                flow=self.flow, curr_time=main_event_loop.global_clock_sec)
 
         # Even if a Packet loss occurred, we can try to schedule new Packets
         # to send (if there's a big enough window size).
@@ -958,10 +958,13 @@ class FlowCompleteEvent(Event):
         :param Statistics statistics: the Statistics to update.
         """
         # Do nothing.
-        pass
+        logger.info("Flow %s completed at time %f s.", self.flow.flow_id,
+                    main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
+
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """

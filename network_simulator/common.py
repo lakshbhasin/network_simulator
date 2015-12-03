@@ -12,8 +12,10 @@ DATA_PACKET_SIZE_BITS = 8192
 ROUTER_PACKET_SIZE_BITS = 512
 
 """Time (sec) after an "initiate routing table update event", after which
-the new routing table is considered stabilized and ready to use."""
-ROUTING_TABLE_STAB_TIME_SEC = 0.5
+the new routing table is considered stabilized and ready to use. This
+estimate is somewhat conservative (for Test Case 1 TCP Reno, the router
+stabilization only takes around 0.02 s)."""
+ROUTING_TABLE_STAB_TIME_SEC = 0.15
 
 """Time (sec) between routing table updates. Must be long enough to ensure
 convergence, but short enough to ensure routing is optimal."""
@@ -26,13 +28,12 @@ INITIAL_WINDOW_SIZE_PACKETS = 1.0
 ROUTER_PACKET_DEFAULT_ID = -1
 
 """Conversion to/from bits <-> KB, MB"""
-KILOBYTE = 8.0 * 1000
-MEGABYTE = 1000 * KILOBYTE
-MEGABIT = 125 * KILOBYTE
+KILOBYTE = 8.0 * 1024
+MEGABYTE = 1024 * KILOBYTE
+MEGABIT = 128 * KILOBYTE
 
 """Flow's packet timeout limit in seconds."""
-# TODO(team): What should this number be?
-FLOW_TIMEOUT_SEC = 1
+FLOW_TIMEOUT_SEC = 0.5
 
 """
 TCP FAST window update smoothing parameter "gamma" (see
@@ -48,7 +49,7 @@ TCP_FAST_DEFAULT_ALPHA = 2.0
 """
 TCP FAST time period (sec) for window updates.
 """
-TCP_FAST_UPDATE_PERIOD_SEC = 0.1
+TCP_FAST_UPDATE_PERIOD_SEC = 0.05
 
 """
 Default max number of packets to average in computing RTTs for TCP algorithms.
@@ -58,9 +59,15 @@ TCP_NUM_PACKETS_AVE_FOR_RTT = 40
 """
 Default initial slow start threshold (in packets) for TCP algorithms.
 """
-TCP_INITIAL_SS_THRESH = 32.0
+TCP_INITIAL_SS_THRESH = 100.0
 
 """
 Window size in time interval for graphing in seconds.
 """
-GRAPH_WINDOW_SIZE = 0.05
+GRAPH_WINDOW_SIZE = 0.10
+
+"""
+Buffer occupancies use a different window size (in seconds) for their graph
+since they change more often.
+"""
+BUFFER_OCC_WINDOW_SIZE = 0.05

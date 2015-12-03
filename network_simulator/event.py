@@ -27,9 +27,10 @@ class Event(object):
         pass
 
     @abstractmethod
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedules new Events. This is called immediately after run().
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """

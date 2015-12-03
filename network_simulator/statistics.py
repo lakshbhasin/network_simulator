@@ -3,10 +3,7 @@ Module for the Statistics class, and other statistics-related details (e.g.
 graphing).
 """
 
-
-from host import *
-from link import *
-from flow import *
+from packet import *
 
 
 class LinkStats(object):
@@ -21,12 +18,10 @@ class LinkStats(object):
     :ivar list packet_transmit_times: a list of (timestamp, packet_size)
     corresponding to when a packet was transmitted. packet_size is in bits.
     """
-    def __init__(self, buffer_occupancy=[], packet_loss_times=[],
-                 packet_transmit_times=[]):
-        self.buffer_occupancy = buffer_occupancy
-        self.packet_loss_times = packet_loss_times
-        self.packet_transmit_times = packet_transmit_times
-
+    def __init__(self):
+        self.buffer_occupancy = []
+        self.packet_loss_times = []
+        self.packet_transmit_times = []
 
 
 class FlowStats(object):
@@ -43,13 +38,11 @@ class FlowStats(object):
     :ivar list window_size_times: a list of (timestamp, window_size) with
     timestamps in seconds and window_size in number of packets.
     """
-    def __init__(self, packet_sent_times=[], packet_rec_times=[],
-                 packet_rtts=[], window_size_times=[]):
-        self.packet_sent_times = packet_sent_times
-        self.packet_rec_times = packet_rec_times
-        self.packet_rtts = packet_rtts
-        self.window_size_times = window_size_times
-
+    def __init__(self):
+        self.packet_sent_times = []
+        self.packet_rec_times = []
+        self.packet_rtts = []
+        self.window_size_times = []
 
 
 class HostStats(object):
@@ -61,9 +54,9 @@ class HostStats(object):
     :ivar list packet_rec_times: a list of (timestamp, packet_size)
     tuples. packet_size is in bits. Time is in seconds.
     """
-    def __init__(self, packet_sent_times=[], packet_rec_times=[]):
-        self.packet_sent_times = packet_sent_times
-        self.packet_rec_times = packet_rec_times
+    def __init__(self):
+        self.packet_sent_times = []
+        self.packet_rec_times = []
 
 
 class Statistics(object):
@@ -77,10 +70,10 @@ class Statistics(object):
     :ivar dict host_stats: a map from host ID to :class:`.HostStats`. host
     ids are strings.
     """
-    def __init__(self, link_stats={}, flow_stats={}, host_stats={}):
-        self.link_stats = link_stats
-        self.flow_stats = flow_stats
-        self.host_stats = host_stats
+    def __init__(self):
+        self.link_stats = dict()
+        self.flow_stats = dict()
+        self.host_stats = dict()
 
     def get_link_stats(self, link):
         """
@@ -124,15 +117,13 @@ class Statistics(object):
     def link_buffer_occ_change(self, link, curr_time):
         """
         Update the buffer size as a link gains or loses a queue element.
+        Note that only DataPackets are included in this count.
 
         :param Link link: link that has a change of buffer size.
         :param float curr_time: time of occupancy change.
         """
         stats = self.get_link_stats(link)
-        # TODO(sharon): Check with Cody if qsize() is what is want here (count
-        # number of all packets). Or do we just want to size of
-        # RoutingPackets.
-        buffer_occ_packets = link.link_buffer.qsize()
+        buffer_occ_packets = link.link_buffer.get_num_data_packets()
         stats.buffer_occupancy.append((curr_time, buffer_occ_packets))
 
     def link_packet_loss(self, link, curr_time):
@@ -182,20 +173,19 @@ class Statistics(object):
         assert isinstance(ack_packet, AckPacket)
 
         stats = self.get_flow_stats(flow)
-        stats.packet_rec_times.append(curr_time)
+        stats.packet_rec_times.append((curr_time, ack_packet.size_bits))
         # Retrieve data packet sent time from the ack packet and use
         # it to calculate RTT.
         sent_time = ack_packet.data_packet_start_time_sec
         stats.packet_rtts.append((curr_time, curr_time - sent_time))
 
-    def flow_window_size(self, flow, curr_time):
+    def flow_window_size_update(self, flow, curr_time):
         """
         Record a change in window size from a flow.
 
         :param Flow flow: flow of action.
         :param float curr_time: simulation time of change.
         """
-        # TODO(laksh): Incorporate this into flow.py code to plot.
         stats = self.get_flow_stats(flow)
         stats.window_size_times.append((curr_time, flow.window_size_packets))
 

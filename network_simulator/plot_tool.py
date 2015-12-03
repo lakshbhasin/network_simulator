@@ -32,7 +32,7 @@ class PlotTool(object):
         output = []
         for idx in range(len(lst)):
             timestamp = lst[idx]
-            if timestamp > curr_window_end_time:
+            while timestamp > curr_window_end_time:
                 output.append((curr_window_end_time, curr_window_count))
                 curr_window_count = 0
                 curr_window_end_time += GRAPH_WINDOW_SIZE
@@ -77,7 +77,7 @@ class PlotTool(object):
         return output
 
     @staticmethod
-    def graph_tuple_list(tuple_list=[], scatter=False):
+    def graph_tuple_list(tuple_list, scatter=False):
         """
         Graphs the content of a tuple list.
 
@@ -91,10 +91,10 @@ class PlotTool(object):
 
         if scatter:
             # Scatter plot.
-            plt.scatter(*zip(*tuple_list), marker='o', linestyle='--')
+            plt.scatter(*zip(*tuple_list), linestyle='--')
         else:
             # Line graph
-            plt.plot(*zip(*tuple_list), marker='o', linestyle='--')
+            plt.plot(*zip(*tuple_list), linestyle='--')
 
     @staticmethod
     def output_sum_avg_tuple_list(id, value_type, count, units, tuple_list):
@@ -178,11 +178,17 @@ class Analyzer(object):
     Graphs statistics items from Statistics class and logs averages of data
     for each network device.
     """
-    def __init__(self, stats=None):
+    def __init__(self, stats, simulation_time, print_links):
         """
         :ivar Statistics stats: input Statistics object for graphing.
+        :ivar float simulation_time: the amount of time (in seconds) for
+        which the simulation has run. Used to bound axes properly.
+        :ivar list print_links: the links to be printed; if the user did
+        not specify this list, the variable is None.
         """
         self.stats = stats
+        self.simulation_time = simulation_time
+        self.print_links = print_links
 
     def graph_links(self):
         """
@@ -200,33 +206,40 @@ class Analyzer(object):
         trans_legend = []
 
         # Iterate through each link to display each stats.
-        for link_name, link_stats in self.stats.link_stats.iteritems():
+        for link_name, link_stats in sorted(self.stats.link_stats.iteritems()):
+            # If there is a valid link list to be printed and the current link
+            # is not included, skip it.
+            if self.print_links:
+                if link_name not in self.print_links:
+                    continue
             # Name of link would be "link_name".
             # Buffer occupancy w.r.t time.
-            plt.subplot(431)
+            plt.subplot(4, 3, 1)
+
             PlotTool.graph_tuple_list(link_stats.buffer_occupancy)
             occpy_legend.append(link_name)
             # Output average buffer occupancy to log.
             PlotTool.output_sum_avg_tuple_list(
                 id="Link " + link_name,
                 value_type="Buffer Occupancy",
-                count=True, units="(pkts)",
+                count=True, units="(data pkts)",
                 tuple_list=link_stats.buffer_occupancy)
 
             # Packet loss times.
-            plt.subplot(434)
+            plt.subplot(4, 3, 4)
             loss_count_lst = PlotTool.gen_count_interval_list(
                 link_stats.packet_loss_times)
             PlotTool.graph_tuple_list(loss_count_lst)
-            loss_legend.append(link_name)
+            if loss_count_lst:
+                loss_legend.append(link_name)
             # Output average packet loss per sec to log.
-            PlotTool.output_count_avg_tuple_list(
+            PlotTool.output_count_avg_list(
                 id="Link " + link_name,
                 value_type="Packet Loss", units="(pkts / sec)",
-                tuple_list=link_stats.packet_loss_times)
+                lst=link_stats.packet_loss_times)
 
             # Packet transmission w.r.t time.
-            plt.subplot(437)
+            plt.subplot(4, 3, 7)
             flow_rate_list = PlotTool.gen_rate_tuple_list(
                 link_stats.packet_transmit_times)
             PlotTool.graph_tuple_list(flow_rate_list)
@@ -238,25 +251,28 @@ class Analyzer(object):
                 tuple_list=link_stats.packet_transmit_times)
 
         # Finalize buffer occupancy graph.
-        plt.subplot(431)
+        plt.subplot(4, 3, 1)
         plt.legend(occpy_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Buffer Occupancy (pkts)")
+        plt.xlim(0.0, self.simulation_time)
+        plt.ylabel("Buffer Occupancy (data pkts)")
 
         # Finalize loss times graph.
-        plt.subplot(434)
+        plt.subplot(4, 3, 4)
         plt.legend(loss_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Packet Losses")
 
         # Finalize packet transmission graph.
-        plt.subplot(437)
+        plt.subplot(4, 3, 7)
         plt.legend(trans_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("Flow Rate (Mbps)")
+        plt.xlim(0.0, self.simulation_time)
+        plt.ylabel("Transmission Rate (Mbps)")
 
     def graph_flows(self):
         """
@@ -275,22 +291,9 @@ class Analyzer(object):
         window_legend = []
 
         # Iterate through each flow to display each stats.
-        for flow_id, flow_stats in self.stats.flow_stats.iteritems():
-            # Name of flow would be "flow_id".
-            # Packet sent times.
-            plt.subplot(432)
-            sent_rate_lst = PlotTool.gen_rate_tuple_list(
-                flow_stats.packet_sent_times)
-            PlotTool.graph_tuple_list(sent_rate_lst)
-            sent_legend.append(flow_id)
-            # Output average packet sent per sec to log.
-            PlotTool.output_rate_avg_tuple_list(
-                id="Flow " + flow_id,
-                value_type="Send Rate", units="(Mbps)",
-                tuple_list=flow_stats.packet_sent_times)
-
+        for flow_id, flow_stats in sorted(self.stats.flow_stats.iteritems()):
             # Packet receive times.
-            plt.subplot(435)
+            plt.subplot(4, 3, 2)
             rec_rate_lst = PlotTool.gen_rate_tuple_list(
                 flow_stats.packet_rec_times)
             PlotTool.graph_tuple_list(rec_rate_lst)
@@ -301,18 +304,21 @@ class Analyzer(object):
                 value_type="Receive Rate", units="(Mbps)",
                 tuple_list=flow_stats.packet_rec_times)
 
-            # Packet RTT times.
-            plt.subplot(438)
-            PlotTool.graph_tuple_list(flow_stats.packet_rtts)
-            rtt_legend.append(flow_id)
-            # Output average packet RTT to log.
-            PlotTool.output_sum_avg_tuple_list(
+            # Name of flow would be "flow_id".
+            # Packet sent times.
+            plt.subplot(4, 3, 5)
+            sent_rate_lst = PlotTool.gen_rate_tuple_list(
+                flow_stats.packet_sent_times)
+            PlotTool.graph_tuple_list(sent_rate_lst)
+            sent_legend.append(flow_id)
+            # Output average packet sent per sec to log.
+            PlotTool.output_rate_avg_tuple_list(
                 id="Flow " + flow_id,
-                value_type="Packet RTT", count=True, units="(sec)",
-                tuple_list=flow_stats.packet_rtts)
+                value_type="Send Rate", units="(Mbps)",
+                tuple_list=flow_stats.packet_sent_times)
 
             # Window size in packets w.r.t time.
-            plt.subplot(4,3,11)
+            plt.subplot(4, 3, 8)
             PlotTool.graph_tuple_list(flow_stats.window_size_times)
             window_legend.append(flow_id)
             # Output average window size to log.
@@ -321,33 +327,47 @@ class Analyzer(object):
                 value_type="Window Size", count=True, units="(pkts)",
                 tuple_list=flow_stats.window_size_times)
 
-        # Finalize sent graph.
-        plt.subplot(432)
-        plt.legend(sent_legend)
-        # Set up labels.
-        plt.xlabel("Time (sec)")
-        plt.ylabel("Flow send rate (Mbps)")
+            # Packet RTT times.
+            plt.subplot(4, 3, 11)
+            PlotTool.graph_tuple_list(flow_stats.packet_rtts)
+            rtt_legend.append(flow_id)
+            # Output average packet RTT to log.
+            PlotTool.output_sum_avg_tuple_list(
+                id="Flow " + flow_id,
+                value_type="Packet RTT", count=True, units="(sec)",
+                tuple_list=flow_stats.packet_rtts)
 
         # Finalize receive graph.
-        plt.subplot(435)
+        plt.subplot(4, 3, 2)
         plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Flow Receive Rate (Mbps)")
 
-        # Finalize RTT graph.
-        plt.subplot(438)
-        plt.legend(rtt_legend)
+        # Finalize sent graph.
+        plt.subplot(4, 3, 5)
+        plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
-        plt.ylabel("RTT (sec)")
+        plt.xlim(0.0, self.simulation_time)
+        plt.ylabel("Flow send rate (Mbps)")
 
         # Finalize window size graph.
-        plt.subplot(4,3,11)
+        plt.subplot(4, 3, 8)
         plt.legend(window_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Window Size (pkts)")
+
+        # Finalize RTT graph.
+        plt.subplot(4, 3, 11)
+        plt.legend(rtt_legend)
+        # Set up labels.
+        plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
+        plt.ylabel("RTT (sec)")
 
     def graph_hosts(self):
         """
@@ -363,10 +383,10 @@ class Analyzer(object):
         receive_legend = []
 
         # Iterate through each host to display each stats.
-        for host_addr, host_stats in self.stats.host_stats.iteritems():
+        for host_addr, host_stats in sorted(self.stats.host_stats.iteritems()):
             # Name of host would be "address".
             # Packet sent times.
-            plt.subplot(433)
+            plt.subplot(4, 3, 3)
             sent_rate_lst = PlotTool.gen_rate_tuple_list(
                 host_stats.packet_sent_times)
             PlotTool.graph_tuple_list(sent_rate_lst)
@@ -378,7 +398,7 @@ class Analyzer(object):
                 tuple_list=host_stats.packet_sent_times)
 
             # Packet receive times.
-            plt.subplot(436)
+            plt.subplot(4, 3, 6)
             rec_rate_lst = PlotTool.gen_rate_tuple_list(
                 host_stats.packet_rec_times)
             PlotTool.graph_tuple_list(rec_rate_lst)
@@ -390,17 +410,19 @@ class Analyzer(object):
                 tuple_list=host_stats.packet_rec_times)
 
         # Finalize sent graph.
-        plt.subplot(433)
+        plt.subplot(4, 3, 3)
         plt.legend(sent_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Host Send Rate (Mbps)")
 
         # Finalize receive graph.
-        plt.subplot(436)
+        plt.subplot(4, 3, 6)
         plt.legend(receive_legend)
         # Set up labels.
         plt.xlabel("Time (sec)")
+        plt.xlim(0.0, self.simulation_time)
         plt.ylabel("Host Receive Rate (Mbps)")
 
     def graph_network(self):
@@ -410,6 +432,7 @@ class Analyzer(object):
         # Set up matplotlib window name.
         fig = plt.figure()
         fig.canvas.set_window_title("Network Statistics")
+        fig.set_facecolor("white")
 
         # Figure adjust to window size.
         fig.set_size_inches(35, 10.5, forward=True)

@@ -1,8 +1,6 @@
 """This module contains all device definitions.
 """
 
-from common import *
-
 
 class Device(object):
     """Representation of a device (Host or Router).
@@ -24,5 +22,3 @@ class Device(object):
 
     def __repr__(self):
         return str(self.__dict__)
-
-    # TODO(team): More event subclasses to come?

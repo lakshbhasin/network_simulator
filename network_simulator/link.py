@@ -3,14 +3,14 @@ This module holds the Link class, the LinkBuffer class, the LinkBufferElement
 class, and various Link-related Events.
 """
 
+from collections import deque
 import logging
-from Queue import Queue
 
-from common import *
-from event import *
-from host import *
-from packet import *
-from router import *
+import numpy as np
+
+from event import Event
+from router import Router, RouterReceivedPacketEvent
+from packet import DataPacket, RouterPacket
 
 logger = logging.getLogger(__name__)
 
@@ -20,19 +20,40 @@ class LinkBuffer(object):
     Representation of a Link's FIFO buffer.
     """
 
-    # TODO(team): Parameters related to link congestion, so we can have dynamic
-    # routing table updates.
-    # TODO(yubo): packet_exemption_times deque
+    """
+    The maximum number of Packets to average over in computing the most
+    recent version of the queuing delay.
+    """
+    NUM_ELEMS_AVE_Q_DEL = 30
 
-    def __init__(self, max_buffer_size_bits=None, queue=Queue()):
+    """
+    The minimum number of queuing delay data points needed before being
+    confident that the average queuing delay is accurate.
+    """
+    MIN_ELEMS_AVE_Q_DEL = 10
+
+    """
+    If any of the data in self.queuing_delays is more than this many seconds
+    old, remove it from the queue (as it is out of date).
+    """
+    MAX_DATA_AGE_SEC = 1.0
+
+    def __init__(self, max_buffer_size_bits):
         """
         :ivar int max_buffer_size_bits: maximum buffer size in bits.
-        :ivar Queue queue: a FIFO queue of LinkBufferElements
+        :ivar Queue queue: a FIFO queue of LinkBufferElements. This is
+        initialized in network_topology.py.
         :ivar int curr_buffer_size_bits: current buffer size in bits
+        :ivar deque queuing_delays: a deque of (exit_time, queuing_delay) tuples
+        representing how long the last NUM_ELEMS_AVE_Q_DEL elements were in
+        the buffer -- and when they left the buffer. The exit_time is used to
+        make sure out-of-date data is not being used. This is initialized in
+        network_topology.py.
         """
         self.max_buffer_size_bits = max_buffer_size_bits
-        self.queue = queue
+        self.queue = None
         self.curr_buffer_size_bits = 0
+        self.queuing_delays = None
 
     def __repr__(self):
         return str(self.__dict__)
@@ -44,12 +65,30 @@ class LinkBuffer(object):
         """
         return self.max_buffer_size_bits - self.curr_buffer_size_bits
 
+    def get_num_packets(self):
+        """
+        :return: The number of Packets in the queue
+        """
+        return self.queue.qsize()
+
+    def get_num_data_packets(self):
+        """
+        :return: The number of DataPackets in the queue.
+        """
+        count = 0
+        for buffer_elem in self.queue.queue:
+            packet = buffer_elem.packet
+            if isinstance(packet, DataPacket):
+                count += 1
+        return count
+
     def push(self, packet, dest_dev, global_clock_sec):
         """
         Pushes packet onto LinkBuffer going towards packet.dest_id
 
         :param Packet packet: Packet to push
         :param Device dest_dev: destination Device of packet
+        :param: global_clock_sec: the current time (in sec)
         :return: True if pushed, False if not
         """
         # If we have a RouterPacket or if there is sufficient capacity, push
@@ -57,18 +96,65 @@ class LinkBuffer(object):
                 self.remaining_size_bits() > packet.size_bits:
             self.curr_buffer_size_bits += packet.size_bits
             self.queue.put(LinkBufferElement(packet, dest_dev,
-                    global_clock_sec))
+                                             global_clock_sec))
             return True
-
         else:
             return False # failed to push
 
-    def pop(self):
+    def pop(self, global_clock_sec):
         """
-        pops off top LinkBufferElement and returns it
+        Pops off top LinkBufferElement and updates metadata. This includes
+        updating the latest queuing delay.
+        :param: global_clock_sec: the current time (in sec)
         :return: top LinkBufferElement
         """
-        return self.queue.get()
+        buff_elem = self.queue.get()
+        self.curr_buffer_size_bits -= buff_elem.packet.size_bits
+
+        # Add this (exit_time, queuing delay) to the left of the deque, and
+        # remove any old ones from the right.
+        this_q_del = global_clock_sec - buff_elem.entry_time
+        assert this_q_del >= 0.0
+        self.queuing_delays.appendleft((global_clock_sec, this_q_del))
+        while len(self.queuing_delays) > LinkBuffer.NUM_ELEMS_AVE_Q_DEL:
+            self.queuing_delays.pop()
+
+        return buff_elem
+
+    def prune_out_of_date_queuing_delays(self, global_clock_sec):
+        """
+        Goes through self.queuing_delays, and removes any data that is more
+        than MAX_DATA_AGE_SEC seconds old.
+        :param float global_clock_sec: current time
+        """
+        # Replacement deque
+        new_queuing_delays = deque()
+        for exit_time, queuing_delay in list(self.queuing_delays):
+            time_since_exit = global_clock_sec - exit_time
+            assert time_since_exit >= 0.0
+
+            if time_since_exit <= LinkBuffer.MAX_DATA_AGE_SEC:
+                new_queuing_delays.append((exit_time, queuing_delay))
+
+        self.queuing_delays = new_queuing_delays
+
+    def get_average_q_del_sec(self, global_clock_sec):
+        """
+        Computes the average queuing delay, using the most recent
+        NUM_ELEMS_AVE_Q_DEL Packets' delays.
+        :param global_clock_sec: The current time, used to make sure we don't
+        use any out-of-date queuing delay data.
+        """
+        # Remove any out-of-date data first.
+        self.prune_out_of_date_queuing_delays(global_clock_sec)
+
+        # Do not compute an average if fewer than MIN_ELEMS_AVE_Q_DEL Packets
+        # have "recently" queued at this Link.
+        if len(self.queuing_delays) < LinkBuffer.MIN_ELEMS_AVE_Q_DEL:
+            return 0.0
+
+        # Average over the queuing delays (second elements in the tuples).
+        return np.mean([elem[1] for elem in list(self.queuing_delays)])
 
 
 class LinkBufferElement(object):
@@ -102,9 +188,8 @@ class Link(object):
     specified, but not the Devices themselves (since those are references).
     """
 
-    def __init__(self, name=None, end_1_addr=None, end_2_addr=None, end_1_device=None,
-            end_2_device=None, link_buffer=LinkBuffer(), static_delay_sec=None,
-            capacity_bps=None, busy = False):
+    def __init__(self, name, end_1_addr, end_2_addr, link_buffer,
+                 static_delay_sec, capacity_bps):
         """
         :ivar str name: name of a Link
         :ivar string end_1_addr: address of Device on one end (e.g. "H1").
@@ -120,12 +205,12 @@ class Link(object):
         self.name = name
         self.end_1_addr = end_1_addr
         self.end_2_addr = end_2_addr
-        self.end_1_device = end_1_device
-        self.end_2_device = end_2_device
+        self.end_1_device = None  # initialized later in network_topology
+        self.end_2_device = None  # initialized later in network_topology
         self.link_buffer = link_buffer
         self.static_delay_sec = static_delay_sec
         self.capacity_bps = capacity_bps
-        self.busy = busy
+        self.busy = False
 
     def __repr__(self):
         return str(self.__dict__)
@@ -135,19 +220,22 @@ class Link(object):
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and \
-               self.end_1_addr == other.end_1_addr and \
-               self.end_2_addr == other.end_2_addr
+               self.name == other.name
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def get_link_cost(self):
+    def get_link_cost(self, global_clock_sec):
         """
-        Returns link cost. For now, just returns static propagation delay.
+        Returns link cost. This is the sum of the propagation delay and the
+        average queuing delay over the last few packets. Transmission delay
+        is ignored.
+        :param: float global_clock_sec: The current time. Used to make sure
+        out-of-date data is not used in computing queuing delay.
         :return: float of link delay time in seconds
         """
-        # TODO(yubo) consider average wait time for last N packets
-        return self.static_delay_sec
+        return self.static_delay_sec + \
+               self.link_buffer.get_average_q_del_sec(global_clock_sec)
 
     def get_other_end(self, one_end):
         """
@@ -160,8 +248,8 @@ class Link(object):
         elif self.end_2_device == one_end:
             return self.end_1_device
         else:
-            raise ValueError("Device " + str(one_end) + " was not one of the "
-                             "ends in Link " + str(self))
+            raise ValueError("Device " + one_end.address + " was not one of "
+                             "the ends in Link " + str(self))
 
     def push(self, packet, dest_dev, global_clock_sec):
         """
@@ -177,7 +265,9 @@ class Link(object):
 
 class LinkSendEvent(Event):
     """
-    Event representing a packet leaving Link's buffer
+    This Event pops a buffer element and sends it with the appropriate
+    transmission and propagation delays. It then schedules another check on
+    the link status, for one transmission delay later.
     """
 
     def __init__(self, link):
@@ -196,24 +286,27 @@ class LinkSendEvent(Event):
         :param MainEventLoop main_event_loop: event loop for global timing
         :param Statistics statistics: the Statistics to update
         """
-
         # sanity check
-        if self.link.queue.empty():
+        if self.link.link_buffer.get_num_packets() == 0:
             logger.warning("LinkSendEvent while Link empty!")
             return
 
         # now pop
-        self.buffer_elem = self.link.pop()
+        self.buffer_elem = self.link.link_buffer.pop(
+            main_event_loop.global_clock_sec)
+        statistics.link_buffer_occ_change(self.link,
+                                          main_event_loop.global_clock_sec)
 
         # update statistics only if not RouterPacket
         if not isinstance(self.buffer_elem.packet, RouterPacket):
-            statistics.link_packet_transmitted(self.link,
-                    self.buffer_elem.packet,
-                    main_event_loop.global_cloc_sec)
+            statistics.link_packet_transmitted(
+                self.link,self.buffer_elem.packet,
+                main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedules new Events. This is called immediately after run().
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
@@ -229,20 +322,54 @@ class LinkSendEvent(Event):
                                               packet=self.buffer_elem.packet),
                     propagation_delay + transmission_delay)
         else:
+            from host import Host, HostReceivedPacketEvent
             assert isinstance(self.buffer_elem.dest_dev, Host)
             main_event_loop.schedule_event_with_delay(
                     HostReceivedPacketEvent(host=self.buffer_elem.dest_dev,
                                             packet=self.buffer_elem.packet),
                     propagation_delay + transmission_delay)
 
-        if self.link.link_buffer.queue.empty():
-            # if link_buffer.queue is empty, then link is no longer busy
+        # Check on the buffer after one transmission delay, to see if
+        # there're more Packets in the buffer or if the Link can be made free.
+        assert self.link.busy
+        check_stat_ev = CheckLinkStatusEvent(link=self.link)
+        main_event_loop.schedule_event_with_delay(check_stat_ev,
+                                                  transmission_delay)
+
+
+class CheckLinkStatusEvent(Event):
+    """
+    This Event checks if the Link's buffer is empty or not. If it is not
+    empty, a new LinkSendEvent is scheduled. Otherwise, the Link is marked as
+    not busy.
+    """
+
+    def __init__(self, link):
+        """
+        :ivar link: The Link to check.
+        """
+        super(CheckLinkStatusEvent, self).__init__()
+        self.link = link
+
+    def run(self, main_event_loop, statistics):
+        """
+        Marks Link as non-busy if buffer is still empty.
+        :param MainEventLoop main_event_loop: event loop
+        :param Statistics statistics: statistics
+        """
+        if self.link.link_buffer.get_num_packets() == 0:
             self.link.busy = False
-        else:
-            # queue new event with just transmission delay
-            assert self.link.busy == True
-            main_event_loop.schedule_event_with_delay(LinkSendEvent(self.link),
-                                                      transmission_delay)
+
+    def schedule_new_events(self, main_event_loop, statistics):
+        """
+        If the buffer is not empty, then schedule a LinkSendEvent immediately.
+        :param Statistics statistics: the Statistics to update
+        :param MainEventLoop main_event_loop: event loop.
+        """
+        if self.link.link_buffer.get_num_packets() != 0:
+            main_event_loop.schedule_event_with_delay(
+                LinkSendEvent(self.link), 0.0)
+            self.link.busy = True
 
 
 class DeviceToLinkEvent(Event):
@@ -273,24 +400,25 @@ class DeviceToLinkEvent(Event):
         """
         # if successfully pushed
         if self.link.push(self.packet, self.dest_dev,
-                          main_event_loop.global_cloc_sec):
-            statistics.link_buffer_occ_change(self, self.packet,
+                          main_event_loop.global_clock_sec):
+            statistics.link_buffer_occ_change(self.link,
                                               main_event_loop.global_clock_sec)
         else:
             statistics.link_packet_loss(self.link,
                                         main_event_loop.global_clock_sec)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Schedules new LinkSendEvent iff Link was not already busy/already has
         LinkSendEvent in queue
+        :param Statistics statistics: the Statistics to update
         :param MainEventLoop main_event_loop: event loop where new Events will
         be scheduled.
         """
         # Only schedule new event if link not busy. Note that dropped packet
         # will be no-op under this, since link would have to be full and
         # definitely be busy if a packet were dropped.
-        if not self.link.busy: 
+        if not self.link.busy:
             main_event_loop.schedule_event_with_delay(
-                LinkSendEvent(self.link), 0)
+                LinkSendEvent(self.link), 0.0)
             self.link.busy = True

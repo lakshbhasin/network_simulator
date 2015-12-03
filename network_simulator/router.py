@@ -1,11 +1,12 @@
 """This module contains Router definition.
 """
 
-from device import *
-from event import *
-from host import *
-from link import *
-from packet import *
+import logging
+
+from common import *
+from device import Device
+from event import Event
+from packet import AckPacket, DataPacket, RouterPacket
 
 logger = logging.getLogger(__name__)
 
@@ -36,39 +37,51 @@ class Router(Device):
     :ivar list neighbors: a list of Devices directly connected to this
         Router. This is assumed to not change over time (i.e. no destruction).
     """
-    def __init__(self, address, links=None):
+    def __init__(self, address):
         Device.__init__(self, address)
         self.new_routing_table = dict()
         self.stable_routing_table = None
         self.neighb_to_host_dists = dict()
         self.self_to_host_dists = dict()
-        self.links = links
+        self.links = None  # initialized later in network_topology.py
         self.last_table_update_timestamp = 0.0
+        self.neighbors = []
+        self.self_to_neighb_dists = dict()
 
+    def setup_neighbors(self):
+        """
+        This function is called after the NetworkTopology class has connected
+        Links to this router. This is used to make sure the Router knows its
+        neighbors.
+        """
         # Compute neighbors based on links.
         neighbors = []
-        if self.links is not None:
-            for link in self.links:
-                # Neighbor associated with Link (i.e. Device on the other side).
-                neighbor = link.get_other_end(self)
-                neighbors.append(neighbor)
-            self.neighbors = neighbors
+        assert self.links is not None
+        for link in self.links:
+            # Neighbor associated with Link (i.e. Device on the other side).
+            neighbor = link.get_other_end(self)
+            neighbors.append(neighbor)
+        self.neighbors = neighbors
 
-            # Update self --> neighbor distances based on connected Links,
-            # and calculate initial routing table based on just this data.
-            self.self_to_neighb_dists = dict()
-            self.update_routing_table(update_self_to_neighbor_dists=True)
+        # Update self --> neighbor distances based on connected Links,
+        # and calculate initial routing table based on just this data.
+        self.self_to_neighb_dists = dict()
+        self.update_routing_table(global_clock_sec=0.0,  # assume time = 0.0
+                                  update_self_to_neighbor_dists=True)
 
-    def update_self_neighbor_dists(self):
+    def update_self_neighbor_dists(self, global_clock_sec):
         """
         Updates the distances from this Router to its neighbors, based on
         their link costs.
+        :param: float global_clock_sec: The current time, used to make sure
+        out-of-date queuing delay data is not used.
         """
         new_self_to_neighb_dists = dict()
         for link in self.links:
             # Neighbor associated with Link (i.e. Device on the other side).
             neighbor = link.get_other_end(self)
-            new_self_to_neighb_dists[neighbor] = link.get_link_cost()
+            new_self_to_neighb_dists[neighbor] = \
+                link.get_link_cost(global_clock_sec)
 
         self.self_to_neighb_dists = new_self_to_neighb_dists
 
@@ -87,6 +100,7 @@ class Router(Device):
         """
         :return: list of neighbors that are Hosts.
         """
+        from host import Host
         neighbor_hosts = []
         for device in self.neighbors:
             if isinstance(device, Host):
@@ -150,7 +164,8 @@ class Router(Device):
 
         return link_to_use
 
-    def update_routing_table(self, update_self_to_neighbor_dists,
+    def update_routing_table(self, global_clock_sec,
+                             update_self_to_neighbor_dists,
                              neighb_to_host_update=None):
         """
         A shortest-path (Bellman-Ford) function that recalculates the routing
@@ -164,6 +179,8 @@ class Router(Device):
         self.self_to_host_dists, and self.new_routing_table are updated (if
         necessary).
 
+        :param float global_clock_sec: The current time in seconds (used to
+        make sure that out-of-date queuing delay data is not used).
         :param bool update_self_to_neighbor_dists: whether to update
             self_to_neighb_dists. This should be set to True when a routing
             table update is initiated, but False otherwise (to prevent
@@ -177,7 +194,7 @@ class Router(Device):
         """
         # Update self --> neighbor distances if desired.
         if update_self_to_neighbor_dists:
-            self.update_self_neighbor_dists()
+            self.update_self_neighbor_dists(global_clock_sec)
 
         # Update neighbor --> host distances based on incoming data (if any).
         if neighb_to_host_update is not None:
@@ -238,6 +255,8 @@ class Router(Device):
         :param MainEventLoop main_event_loop: Event loop for scheduling
             DeviceToLinkEvents asynchronously.
         """
+        logger.debug("Router %s broadcasting router packets.", self.address)
+
         # Map from RouterHost to *min* distance (in sec) between this Router
         # and that Host. This is just a transformation of self_to_host_dists.
         router_to_host_dists = dict()
@@ -256,6 +275,7 @@ class Router(Device):
                                          main_event_loop.global_clock_sec,
                                          router_to_host_dists=
                                          router_to_host_dists)
+            from link import DeviceToLinkEvent
             dev_to_link_ev = DeviceToLinkEvent(packet=router_packet,
                                                link=link,
                                                dest_dev=destination)
@@ -306,7 +326,7 @@ class InitiateRoutingTableUpdateEvent(Event):
         Initiates the routing table update by updating metadata and updating
         directly connected Links' costs.
         :param main_event_loop:
-        :param statistics:
+        :param Statistics statistics: the Statistics to update
         """
         # Swap out the routing tables.
         self.router.stable_routing_table = self.router.new_routing_table
@@ -318,13 +338,16 @@ class InitiateRoutingTableUpdateEvent(Event):
 
         # Trigger update based only on changed Link costs of the Router's
         # direct neighbors. This will set up self_to_host_dists properly.
-        self.router.update_routing_table(update_self_to_neighbor_dists=True)
+        self.router.update_routing_table(
+            global_clock_sec=main_event_loop.global_clock_sec,
+            update_self_to_neighbor_dists=True)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
         Create a RouterPacket with the current self.router.self_to_host_dists
         (transformed appropriately) and send it down each connected Link via
         a DeviceToLinkEvent. Also, initiate another RouterReceivedPacketEvent.
+        :param Statistics statistics: the Statistics to update
         :param main_event_loop:
         """
         self.router.broadcast_router_packets(main_event_loop)
@@ -363,7 +386,7 @@ class RouterReceivedPacketEvent(Event):
         For router packets: Sanity checks, then update routing table
         synchronously.
         :param main_event_loop:
-        :param statistics:
+        :param Statistics statistics: the Statistics to update
         """
         if isinstance(self.packet, DataPacket) or \
                 isinstance(self.packet, AckPacket):
@@ -372,9 +395,8 @@ class RouterReceivedPacketEvent(Event):
                 curr_timestamp=main_event_loop.global_clock_sec)
             if self.link is None:
                 # Drop Packet and inform statistics.
-                logger.info("Router " + self.router.address + " could not " +
-                            "route packet going to " + self.packet.dest_id)
-                # TODO(team): Need way of detecting packet loss at Router?
+                logger.debug("Router " + self.router.address + " could not " +
+                             "route packet going to " + self.packet.dest_id)
                 pass
         else:
             # Ensure RouterPacket's final destination was this Router.
@@ -384,14 +406,18 @@ class RouterReceivedPacketEvent(Event):
             # Check if the Router's "self_to_host_dists" changed. Do not update
             # router --> neighbor direct distances on receipt of a RouterPacket,
             # since that will cause constant broadcasting of RouterPackets
-            # (as "self_to_host_dists" keeps changing).
+            # (as "self_to_host_dists" keeps changing based on neighbors'
+            # link costs).
             self.router_to_host_dists_changed = \
                 self.router.update_routing_table(
+                    global_clock_sec=main_event_loop.global_clock_sec,
                     update_self_to_neighbor_dists=False,
                     neighb_to_host_update=self.packet.router_to_host_dists)
 
-    def schedule_new_events(self, main_event_loop):
+    def schedule_new_events(self, main_event_loop, statistics):
         """
+
+        :param Statistics statistics: the Statistics to update
         For data/ACKs: Schedules a DeiceToLinkEvent if route was found.
         For router packets: Router sends its self_to_host_dists in the right
         format, to all of its connected Routers. But *only* if the Router's
@@ -402,6 +428,7 @@ class RouterReceivedPacketEvent(Event):
                 isinstance(self.packet, AckPacket):
             if self.link is not None:
                 destination = self.link.get_other_end(self.router)
+                from link import DeviceToLinkEvent
                 dev_to_link_ev = DeviceToLinkEvent(packet=self.packet,
                                                    link=self.link,
                                                    dest_dev=destination)
