@@ -4,9 +4,7 @@ TCP algorithms), and Flow-related Events.
 """
 
 from abc import ABCMeta, abstractmethod
-import copy
 import logging
-from Queue import Queue
 
 import numpy as np
 
@@ -57,8 +55,8 @@ class Flow(object):
         :ivar Host dest: dest Host.
         :ivar float window_size_packets: The maximum number of packets that
         can be in transit at a given time.
-        :ivar set<int> packets_in_transit: set of packet IDs that are either
-        currently in transit, or *scheduled* to be in transit.
+        :ivar set<int> packets_in_transit: set of packet IDs that are
+        currently in transit.
         :ivar list packet_rtts: list of (packet_id, rtt) tuples that stores
         the RTT for each Packet that completed a round trip.
         :ivar int data_size_bits: total amount of data to transmit in bits.
@@ -67,9 +65,9 @@ class Flow(object):
         :ivar int max_packet_id_sent: the maximum DataPacket ID that has been
         sent (might not have been ACK'd yet).
         :ivar set<int> gap_retrans_packets: a set of DataPacket IDs that have
-        been retransmitted (or buffered to retransmit) following an ACK gap (or
-        multiple ACK gaps, as in Reno). This is used to make sure we don't
-        retransmit the same packet ID multiple times after many gaps.
+        been retransmitted following an ACK gap (or multiple ACK gaps,
+        as in Reno). This is used to make sure we don't retransmit the same
+        packet ID multiple times after many gaps.
         :ivar dict num_timeouts_pending: a map from Packet ID (int) to the
         number of timeouts that are pending for this Packet (if any). This is
         used to make sure that, if there are (e.g.) 2 timeouts pending for a
@@ -155,10 +153,6 @@ class Flow(object):
             2) A single ACK that indicates the given packet is missing (logic
                for dealing with repeated gaps will be in Flow subclasses)
         If necessary, this flow can directly add Events to the MainEventLoop.
-
-        Note: If a packet loss occurs but the max window size of the flow has
-        already been reached, we can't retransmit. In these cases, the packet is
-        added to a buffer.
 
         :param int packet_id: lost Packet's ID.
         :param PacketLossType loss_type: the kind of packet loss that occurred.
@@ -282,8 +276,7 @@ class FlowDummy(Flow):
 
     def handle_packet_loss(self, packet_id, loss_type, main_event_loop):
         """
-        Update metadata and retransmit the packet if possible. Do not change
-        window size.
+        Update metadata and retransmit the packet. Do not change window size.
         :param int packet_id: the lost Packet's id.
         :param PacketLossType loss_type: the kind of loss that occurred.
         :param MainEventLoop main_event_loop: event loop.
@@ -520,7 +513,7 @@ class FlowFast(Flow):
                                                  main_event_loop)
 
         if loss_type == PacketLossType.TIMEOUT:
-            # Always retransmit if possible in case of timeouts.
+            # Always retransmit in case of timeouts.
             logger.debug("Flow %s retransmitting packet %d due to timeout.",
                          self.flow_id, packet_id)
             self.retransmit(packet_id, main_event_loop)
